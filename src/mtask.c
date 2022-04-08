@@ -80,3 +80,55 @@ void task_switch(void)
   }
   return;
 }
+
+/**
+ * 任务休眠
+ */
+void task_sleep(struct TASK *task)
+{
+  int i;
+  char ts = 0;
+  if (task->flags == 2)
+  {
+    /* 任务task处于唤醒状态 */
+    if (task == taskctl->tasks[taskctl->now])
+    {
+      /* 当前任务正在运行，让自己休眠 */
+      ts = 1;
+    }
+
+    /* 寻找task所在的位置 */
+    for (i = 0; i < taskctl->runing; i++)
+    {
+      if (task == taskctl->tasks[i])
+      {
+        break;
+      }
+    }
+
+    /* 调整任务列表 */
+    taskctl->runing--;
+    if (i < taskctl->now) {
+      taskctl->now--;
+    }
+
+    /* 移动任务成员 */
+    for (; i < taskctl->runing; i++)
+    {
+      taskctl->tasks[i] = taskctl->tasks[i + 1];
+    }
+
+    /* 设置任务休眠 */
+    task->flags = 1;
+    if (ts != 0)
+    {
+      /* 休眠自己前，先切换任务 */
+      if (taskctl->now >= taskctl->runing)
+      {
+        taskctl->now = 0;
+      }
+      farjmp(0, taskctl->tasks[taskctl->now]->sel);
+    }
+  }
+  return;
+}
