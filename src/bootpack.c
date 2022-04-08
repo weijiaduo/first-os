@@ -26,7 +26,6 @@ void HariMain(void)
 	unsigned char *buf_win;
 
 	int mx, my, i;
-	unsigned int count = 0;
 
 	/* 初始化段表和中断记录表 */
 	init_gdtidt();
@@ -108,8 +107,7 @@ void HariMain(void)
   for (;;)
   {
 		/* 计数 */
-		count++;
-		sprintf(s, "%010d", count);
+		sprintf(s, "%010d", timerctl.count);
 		boxfill8(buf_win, 160, COL8_C6C6C6, 40, 28, 119, 43);
 		putfonts8_asc(buf_win, 160, 40, 28, COL8_000000, s);
 		sheet_refresh(sht_win, 40, 28, 120, 44);
