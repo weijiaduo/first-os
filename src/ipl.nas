@@ -42,12 +42,27 @@ entry:
     MOV   DH,0          ; 磁头0
     MOV   CL,2          ; 扇区2
 
+    MOV   SI,0          ; 读取次数
+
+; 重试读取磁盘5次
+
+retry:
     MOV   AH,0x02       ; 读盘
     MOV   AL,1          ; 1个扇区
     MOV   BX,0          ; 缓冲地址[ES:BX]，ES*16+BX
     MOV   DL,0x00       ; A驱动器
     INT   0x13          ; 调用磁盘BIOS
-    JC    error
+    JNC   fin           ; 读取成功跳到 fin
+
+    ADD   SI,1          ; 失败次数+1
+    CMP   SI,5          ; 比较SI和5
+    JAE   error         ; SI >= 5
+
+    MOV   AH,0x00
+    MOV   DL,0x00       ; A驱动器
+    INT   0x13          ; 重置驱动器
+
+    JMP   retry
 
 fin:
     HLT                 ; 让CPU停止，等待指令
