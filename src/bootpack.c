@@ -15,6 +15,9 @@ void HariMain(void)
 	/* 初始化PIC */
 	init_pic();
 
+	/* 允许CPU接收来自外部设备的中断 */
+	io_sti();
+
 	/* 初始化调色板 */
   init_palette();
   
@@ -30,6 +33,10 @@ void HariMain(void)
 	/* 打印字符串变量值 */
 	sprintf(s, "(%d, %d)", mx, my);
 	putfonts8_asc(binfo->vram, binfo->scrnx, 0, 0, COL8_FFFFFF, s);
+
+	/* 启用PIC */
+	io_out8(PIC0_IMR, 0xf9); /* 11111001 启用IRQ1（键盘）和IRQ2 */
+	io_out8(PIC1_IMR, 0xef); /* 11101111 启用IRQ12（鼠标） */
 
   for (;;)
   {
