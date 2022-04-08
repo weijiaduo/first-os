@@ -26,6 +26,7 @@ void HariMain(void)
 	unsigned char *buf_win;
 
 	int mx, my, i;
+	unsigned int count = 0;
 
 	/* 初始化段表和中断记录表 */
 	init_gdtidt();
@@ -65,10 +66,10 @@ void HariMain(void)
 	sht_mouse = sheet_alloc(shtctl);
 	sht_win = sheet_alloc(shtctl);
 	buf_back = (unsigned char *) memman_alloc_4k(memman, binfo->scrnx * binfo->scrny);
-	buf_win = (unsigned char *) memman_alloc_4k(memman, 160 * 68);
+	buf_win = (unsigned char *) memman_alloc_4k(memman, 160 * 52);
 	sheet_setbuf(sht_back, buf_back, binfo->scrnx, binfo->scrny, -1);
 	sheet_setbuf(sht_mouse, buf_mouse, 16, 16, 99);
-	sheet_setbuf(sht_win, buf_win, 160, 68, -1);
+	sheet_setbuf(sht_win, buf_win, 160, 52, -1);
   
 	/* 初始化屏幕 */
   init_screen8(buf_back, binfo->scrnx, binfo->scrny);
@@ -81,15 +82,13 @@ void HariMain(void)
 	sheet_slide(sht_mouse, mx, my);
 
 	/* 初始化窗口 */
-	make_window8(buf_win, 160, 68, "Window");
-	putfonts8_asc(buf_win, 160, 24, 28, COL8_000000, "Welcome to");
-	putfonts8_asc(buf_win, 160, 24, 44, COL8_000000, "  Haribote-OS!");
+	make_window8(buf_win, 160, 52, "counter");
 	sheet_slide(sht_win, 80, 72);
 
 	/* 设置背景图层和鼠标图层 */
 	sheet_updown(sht_back,  0);
-	sheet_updown(sht_win, 2);
-	sheet_updown(sht_mouse, 1);
+	sheet_updown(sht_win, 1);
+	sheet_updown(sht_mouse, 2);
 
 	/* 打印字符串变量值 */
 	sprintf(s, "(%d, %d)", mx, my);
@@ -105,6 +104,13 @@ void HariMain(void)
 
   for (;;)
   {
+		/* 计数 */
+		count++;
+		sprintf(s, "%010d", count);
+		boxfill8(buf_win, 160, COL8_C6C6C6, 40, 28, 119, 43);
+		putfonts8_asc(buf_win, 160, 40, 28, COL8_000000, s);
+		sheet_refresh(sht_win, 40, 28, 120, 44);
+
 		io_cli();
 		if (fifo8_status(&keyfifo) != 0)
 		{
@@ -146,22 +152,10 @@ void HariMain(void)
 				/* 鼠标指针的移动 */
 				mx += mdec.x;
 				my += mdec.y;
-				if (mx < 0)
-				{
-					mx = 0;
-				}
-				if (my < 0)
-				{
-					my = 0;
-				}
-				if (mx > binfo->scrnx - 1)
-				{
-					mx = binfo->scrnx - 1;
-				}
-				if (my > binfo->scrny - 1)
-				{
-					my = binfo->scrny - 1;
-				}
+				if (mx < 0) { mx = 0; }
+				if (my < 0) { my = 0; }
+				if (mx > binfo->scrnx - 1) { mx = binfo->scrnx - 1; }
+				if (my > binfo->scrny - 1) { my = binfo->scrny - 1; }
 				sprintf(s, "(%3d, %3d)", mx, my);
 				boxfill8(buf_back, binfo->scrnx, COL8_008484, 0, 0, 79, 15); /* 隐藏坐标 */
 				putfonts8_asc(buf_back, binfo->scrnx, 0 , 0, COL8_FFFFFF, s); /* 显示坐标 */
@@ -173,7 +167,7 @@ void HariMain(void)
 		}
 		else
 		{
-			io_stihlt();
+			io_sti();
 		}
   }
 }
