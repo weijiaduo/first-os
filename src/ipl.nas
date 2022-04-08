@@ -1,4 +1,4 @@
-; hello-os
+; haribote-ipl
 ; TAB=4
 
     ORG   0x7c00        ; 指明程序的装载地址
@@ -32,9 +32,28 @@ entry:
     MOV   AX,0          ; AX=0；初始化寄存器
     MOV   SS,AX
     MOV   SP,0x7c00
-    MOV   DS,AX
-    MOV   ES,AX
+    MOV   DS,AX         ; 默认段寄存器
 
+; 读取磁盘扇区
+
+    MOV   AX,0x0820
+    MOV   ES,AX
+    MOV   CH,0          ; 柱面0
+    MOV   DH,0          ; 磁头0
+    MOV   CL,2          ; 扇区2
+
+    MOV   AH,0x02       ; 读盘
+    MOV   AL,1          ; 1个扇区
+    MOV   BX,0          ; 缓冲地址[ES:BX]，ES*16+BX
+    MOV   DL,0x00       ; A驱动器
+    INT   0x13          ; 调用磁盘BIOS
+    JC    error
+
+fin:
+    HLT                 ; 让CPU停止，等待指令
+    JMP   fin           ; 无限循环
+
+error:
     MOV   SI,msg
 
 putloop:
@@ -49,13 +68,9 @@ putloop:
 
     JMP   putloop
 
-fin:
-    HLT                 ; 让CPU停止，等待指令
-    JMP   fin           ; 无限循环
-
 msg:
     DB    0x0a, 0x0a    ; 2个换行
-    DB    "hello, weijiaduo"
+    DB    "load error"
     DB    0x0a          ; 换行
     DB    0
 
