@@ -94,6 +94,10 @@ next:
     CMP   CH,CYLS
     JB    readloop
 
+; 跳转到 haribote.sys 文件执行
+
+    JMP 0xc200
+
 fin:
     HLT                 ; 让CPU停止，等待指令
     JMP   fin           ; 无限循环
