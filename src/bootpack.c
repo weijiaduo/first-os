@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 /* 声明函数，函数定义在别的文件里 */
 void io_hlt(void);
 void io_cli(void);
@@ -44,6 +46,7 @@ struct BOOTINFO {
 void HariMain(void)
 {
 	struct BOOTINFO *binfo = (struct BOOTINFO *) 0x0ff0;
+	char s[40];
 
 	/* 设定调色板 */
   init_palette();
@@ -55,6 +58,10 @@ void HariMain(void)
 	putfonts8_asc(binfo->vram, binfo->scrnx,  8,  8, COL8_FFFFFF, "ABC 123");
 	putfonts8_asc(binfo->vram, binfo->scrnx, 31, 31, COL8_000000, "Haribote OS.");
 	putfonts8_asc(binfo->vram, binfo->scrnx, 30, 30, COL8_FFFFFF, "Haribote OS.");
+
+	/* 打印字符串变量值 */
+	sprintf(s, "scrnx = %d", binfo->scrnx);
+	putfonts8_asc(binfo->vram, binfo->scrnx, 16, 64, COL8_FFFFFF, s);
 
   for (;;)
   {
