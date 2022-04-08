@@ -30,8 +30,7 @@ void store_cr0(int cr0);
 void load_tr(int tr);
 
 /* 任务切换 */
-void taskswitch3(void);
-void taskswitch4(void);
+void farjmp(int eip, int cs);
 
 /* 中断处理函数 */
 void asm_inthandler20(void);

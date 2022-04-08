@@ -15,7 +15,7 @@ void HariMain(void)
 	int fifobuf[128];
 
 	struct MOUSE_DEC mdec;
-	struct TIMER *timer, *timer2, *timer3;
+	struct TIMER *timer, *timer2, *timer3, *timer_ts;
 
 	unsigned int memtotal;
 	struct MEMMAN *memman = (struct MEMMAN *) MEMMAN_ADDR;
@@ -85,6 +85,11 @@ void HariMain(void)
 	timer3 = timer_alloc();
 	timer_init(timer3, &fifo, 1);
 	timer_settime(timer3, 50);
+
+	/* 多任务定时器 */
+	timer_ts = timer_alloc();
+	timer_init(timer_ts, &fifo, 2);
+	timer_settime(timer_ts, 2);
 
 	/* 内存管理 */
 	memtotal = memtest(0x00400000, 0xbfffffff);
@@ -176,7 +181,12 @@ void HariMain(void)
 		{
 			i = fifo32_get(&fifo);
 			io_sti();
-			if (256 <= i && i <= 511)
+			if (i == 2) {
+				/* 任务切换 */
+				farjmp(0, 4 * 8);
+				timer_settime(timer_ts, 2);
+			}
+			else if (256 <= i && i <= 511)
 			{
 				/* 键盘数据 */
 				sprintf(s, "%02X", i - 256);
@@ -247,7 +257,6 @@ void HariMain(void)
 			{
 				/* 10秒定时器 */
 				putfonts_asc_sht(sht_back, 0, 64, COL8_FFFFFF, COL8_008484, "10[sec]", 7);
-				taskswitch4();
 			}
 			else if (i == 3)
 			{
@@ -364,24 +373,24 @@ void make_textbox8(struct SHEET *sht, int x0, int y0, int sx, int sy, int c)
 void task_b_main(void)
 {
 	struct FIFO32 fifo;
-	struct TIMER *timer;
+	struct TIMER *timer_ts;
 	int i, fifobuf[128];
 
 	fifo32_init(&fifo, 128, fifobuf);
-	timer = timer_alloc();
-	timer_init(timer, &fifo, 1);
-	timer_settime(timer, 500);
+	timer_ts = timer_alloc();
+	timer_init(timer_ts, &fifo, 1);
+	timer_settime(timer_ts, 2);
 
 	for (;;) {
 		io_cli();
 		if (fifo32_status(&fifo) == 0) {
-			io_sti();
-			io_hlt();
+			io_stihlt();
 		} else {
 			i = fifo32_get(&fifo);
 			io_sti();
 			if (i == 1) { /* 超时时间为5秒 */
-				taskswitch3(); /* 切换回任务A */
+				farjmp(0, 3 * 8);
+				timer_settime(timer_ts, 2);
 			}
 		}
 	}
