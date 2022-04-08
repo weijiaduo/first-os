@@ -255,4 +255,4 @@ struct TSS32 {
 	int ldtr, iomap;
 };
 
-void task_b_main(void);
+void task_b_main(struct SHEET *sht_back);
