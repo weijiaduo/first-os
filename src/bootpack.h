@@ -247,12 +247,16 @@ void timer_init(struct TIMER *timer, struct FIFO32 *fifo, int data);
 void timer_settime(struct TIMER *timer, unsigned int timeout);
 void inthandler20(int *esp);
 
-/* 多任务切换 */
+
+/* mtask.c */
 struct TSS32 {
 	int backlink, esp0, ss0, esp1, ss1, esp2, ss2, cr3;
 	int eip, eflags, eax, ecx, edx, ebx, esp, ebp, esi, edi;
 	int es, cs, ss, ds, fs, gs;
 	int ldtr, iomap;
 };
+extern struct TIMER *mt_timer;
+void mt_init(void);
+void mt_taskswitch(void);
 
 void task_b_main(struct SHEET *sht_back);
