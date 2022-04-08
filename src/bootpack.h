@@ -202,11 +202,12 @@ struct SHEET {
 };
 struct SHTCTL {
 	unsigned char *vram;
+	unsigned char *map;
 	int xsize;
 	int ysize;
 	int top;
 	struct SHEET *sheets[MAX_SHEETS];
-	struct SHEET sheet0[MAX_SHEETS];
+	struct SHEET sheets0[MAX_SHEETS];
 };
 
 struct SHTCTL * shtctl_init(struct MEMMAN *man, unsigned char *vram, int xsize, int ysize);
