@@ -56,20 +56,22 @@ void sheet_setbuf(struct SHEET *sht, unsigned char *buf, int xsize, int ysize, i
 /** 刷新指定区域 */
 void sheet_refreshsub(struct SHTCTL *ctl, int vx0, int vy0, int vx1, int vy1)
 {
-  int h;
-  int bx;
-  int by;
-  int vx;
-  int vy;
+  int h, bx, by, vx, vy;
   unsigned char *buf;
   unsigned char c;
   unsigned char *vram = ctl->vram;
 
-  int bx0;
-  int by0;
-  int bx1;
-  int by1;
+  int bx0, by0, bx1, by1;
   struct SHEET *sht;
+
+  if (vx0 < 0)
+  {
+    vx0 = 0;
+  }
+  if (vy0 < 0) { vy0 = 0; }
+  if (vx1 > ctl->xsize) { vx1 = ctl->xsize; }
+  if (vy1 > ctl->ysize) { vy1 = ctl->ysize; }
+
   for (h = 0; h <= ctl->top; h++)
   {
     sht = ctl->sheets[h];
@@ -79,22 +81,10 @@ void sheet_refreshsub(struct SHTCTL *ctl, int vx0, int vy0, int vx1, int vy1)
     by0 = vy0 - sht->vy0;
     bx1 = vx1 - sht->vx0;
     by1 = vy1 - sht->vy0;
-    if (bx0 < 0)
-    {
-      bx0 = 0;
-    }
-    if (by0 < 0)
-    {
-      by0 = 0;
-    }
-    if (bx1 > sht->bxsize)
-    {
-      bx1 = sht->bxsize;
-    }
-    if (by1 > sht->bysize)
-    {
-      by1 = sht->bysize;
-    }
+    if (bx0 < 0) { bx0 = 0; }
+    if (by0 < 0) { by0 = 0; }
+    if (bx1 > sht->bxsize) { bx1 = sht->bxsize; }
+    if (by1 > sht->bysize) { by1 = sht->bysize; }
 
     for (by = by0; by < by1; by++)
     {
