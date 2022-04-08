@@ -42,9 +42,10 @@ entry:
     MOV   DH,0          ; 磁头0
     MOV   CL,2          ; 扇区2
 
-    MOV   SI,0          ; 读取次数
-
 ; 重试读取磁盘5次
+
+readloop:
+    MOV   SI,0          ; 读取次数
 
 retry:
     MOV   AH,0x02       ; 读盘
@@ -52,7 +53,7 @@ retry:
     MOV   BX,0          ; 缓冲地址[ES:BX]，ES*16+BX
     MOV   DL,0x00       ; A驱动器
     INT   0x13          ; 调用磁盘BIOS
-    JNC   fin           ; 读取成功跳到 fin
+    JNC   next          ; 读取成功跳到 next
 
     ADD   SI,1          ; 失败次数+1
     CMP   SI,5          ; 比较SI和5
@@ -63,6 +64,17 @@ retry:
     INT   0x13          ; 重置驱动器
 
     JMP   retry
+
+; 读取下一个磁盘扇区
+
+next:
+    MOV   AX,ES         ; 把内存地址往后移动 0x0200
+    ADD   AX,0x0020
+    MOV   ES,AX         ; 因为没有 ADD ES,0x0020 指令，所以通过 AX 来实现
+
+    ADD   CL,1
+    CMP   CL,18
+    JBE   readloop      ; CL <= 18
 
 fin:
     HLT                 ; 让CPU停止，等待指令
