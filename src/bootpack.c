@@ -1,7 +1,27 @@
 #include "bootpack.h"
 #include <stdio.h>
 
+#define MEMMAN_FREES		4090 /* 大约是32KB */
+#define MEMMAN_ADDR			0x003c0000
+
+struct FREEINFO {
+	unsigned int addr;
+	unsigned int size;
+};
+
+struct MEMMAN { /* 内存管理 */
+	int frees;
+	int maxfrees;
+	int lostsize;
+	int losts;
+	struct FREEINFO free[MEMMAN_FREES];
+};
+
 unsigned int memtest(unsigned int start, unsigned int end);
+void memman_init(struct MEMMAN *man);
+unsigned int memman_total(struct MEMMAN *man);
+unsigned int memman_alloc(struct MEMMAN *man, unsigned int size);
+int memman_free(struct MEMMAN *man, unsigned int addr, unsigned int size);
 
 void HariMain(void)
 {
@@ -11,6 +31,8 @@ void HariMain(void)
 	char keybuf[32];
 	char mousebuf[128];
 	struct MOUSE_DEC mdec;
+	unsigned int memtotal;
+	struct MEMMAN *memman = (struct MEMMAN *) MEMMAN_ADDR;
 	int mx;
 	int my;
 	int i;
@@ -38,6 +60,12 @@ void HariMain(void)
 	/* 激活鼠标 */
 	enable_mouse(&mdec);
 
+	/* 内存管理 */
+	memtotal = memtest(0x00400000, 0xbfffffff);
+	memman_init(memman);
+	memman_free(memman, 0x00001000, 0x0009e000); /* 0x00001000 - 0x0009efff */
+	memman_free(memman, 0x00400000, memtotal - 0x00400000);
+
 	/* 初始化调色板 */
   init_palette();
   
@@ -55,8 +83,8 @@ void HariMain(void)
 	putfonts8_asc(binfo->vram, binfo->scrnx, 0, 0, COL8_FFFFFF, s);
 
 	/* 内存检查 */
-	i = memtest(0x00400000, 0xbfffffff) / (1024 * 1024);
-	sprintf(s, "memory %dMB", i);
+	sprintf(s, "memory %dMB   free : %dKB",
+			memtotal / (1024 * 1024), memman_total(memman) / 1024);
 	putfonts8_asc(binfo->vram, binfo->scrnx, 0, 32, COL8_FFFFFF, s);
 
   for (;;)
@@ -169,4 +197,131 @@ unsigned int memtest(unsigned int start, unsigned int end)
 	}
 
 	return i;
+}
+
+void memman_init(struct MEMMAN *man)
+{
+	man->frees = 0;			/* 可用信息数目 */
+	man->maxfrees = 0;  /* 用于观察可用状况：frees的最大值 */
+	man->lostsize = 0;  /* 释放失败的内存的大小总和 */
+	man->losts = 0;     /* 释放失败次数 */
+	return;
+}
+
+unsigned int memman_total(struct MEMMAN *man)
+{
+	unsigned int i;
+	unsigned int t = 0;
+	for (i = 0; i < man->frees; i++)
+	{
+		t += man->free[i].size;
+	}
+	return t;
+}
+
+/** 分配内存 */
+unsigned int memman_alloc(struct MEMMAN *man, unsigned int size)
+{
+	unsigned int i;
+	unsigned int a;
+	for (i = 0; i < man->frees; i++)
+	{
+		if (man->free[i].size >= size)
+		{
+			/* 找到了足够大的内存 */
+			a = man->free[i].addr;
+			man->free[i].addr += size;
+			man->free[i].size -= size;
+			if (man->free[i].size == 0)
+			{
+				/* 如果free[i]变成了0，就删除掉这一条记录 */
+				man->frees--;
+				for (; i < man->frees; i++)
+				{
+					man->free[i] = man->free[i + 1];
+				}
+			}
+			return a;
+		}
+	}
+	return 0; /* 没有可用的空间 */
+}
+
+/** 释放内存 */
+int memman_free(struct MEMMAN *man, unsigned int addr, unsigned int size)
+{
+	int i;
+	int j;
+
+	/* 为了便于归纳内存，将free[]按照addr的顺序排列 */
+	/* 所以，先决定应该放在哪里 */
+	for (i = 0; i < man->frees; i++)
+	{
+		if (man->free[i].addr > addr)
+		{
+			break;
+		}
+	}
+
+	if (i > 0)
+	{
+		/* 前面有可用的内存 */
+		if (man->free[i - 1].addr + man->free[i - 1].size == addr)
+		{
+			/* 可与前面的内存合并在一起 */
+			man->free[i - 1].size += size;
+			if (i < man->frees)
+			{
+				/* 查看后面的内存是否也可以合并 */
+				if (addr + size == man->free[i].addr)
+				{
+					/* 也可以和后面的可用内存合并在一起 */
+					man->free[i - 1].size += man->free[i].size;
+					/* 删除free[i] */
+					man->frees--;
+					for (; i < man->frees; i++)
+					{
+						man->free[i] = man->free[i + 1];
+					}
+				}
+			}
+			return 0;
+		}
+	}
+
+	if (i < man->frees)
+	{
+		/* 不能与前面的可用空间合并到一起 */
+		if (addr + size == man->free[i].addr)
+		{
+			/* 可以与后面的内存合并在一起 */
+			man->free[i].addr = addr;
+			man->free[i].size += size;
+			return 0;
+		}
+	}
+
+	/* 既不能与前面的合并，也不能与后面的合并 */
+	if (man->frees < MEMMAN_FREES)
+	{
+		/* free[i]之后的向后移动，腾出空间 */
+		for (j = man->frees; j > i; j--)
+		{
+			man->free[j] = man->free[j - 1];
+		}
+		man->frees++;
+		if (man->maxfrees < man->frees)
+		{
+			/* 更新最大值 */
+			man->maxfrees = man->frees;
+		}
+		man->free[i].addr = addr;
+		man->free[i].size = size;
+		return 0;
+	}
+
+	/* 不能往后移动 */
+	man->losts++;
+	man->lostsize += size;
+	return -1; /* 失败 */
 }
