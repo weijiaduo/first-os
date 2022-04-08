@@ -1,0 +1,30 @@
++++++++
+2.6.0
++++++++
+Same as 2.5.0
+
+test-i386.bat
+==============
+	Works for GTK
+	Keyboard to be loaded run-time "loadkeys /lib/kbd/fr-pc.map"
+	madplay and xinit xorking => sound not working
+
+test-arm.bat
+============
+	Works for GTK
+
+test-sparc.bat
+==============
+	Works for GTK
+
+test-mipsel.bat
+===============
+	Not working (?) = no window displayed and dunno how to connect (through serial link ?)
+
+test-ppc.bat
+============
+	Working in nographic mode with 'console' executable
+	/selftest.sh works
+x86_64
+=======
+	Not tested

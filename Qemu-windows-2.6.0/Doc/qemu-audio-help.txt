@@ -1,0 +1,67 @@
+Audio options:
+  QEMU_AUDIO_DAC_FIXED_SETTINGS: boolean, default = 1
+    Use fixed settings for host DAC
+  QEMU_AUDIO_DAC_FIXED_FREQ: integer, default = 44100
+    Frequency for fixed host DAC
+  QEMU_AUDIO_DAC_FIXED_FMT: format, default = S16, (one of: U8 S8 U16 S16 U32 S32)
+    Format for fixed host DAC
+  QEMU_AUDIO_DAC_FIXED_CHANNELS: integer, default = 2
+    Number of channels for fixed DAC (1 - mono, 2 - stereo)
+  QEMU_AUDIO_DAC_VOICES: integer, default = 1
+    Number of voices for DAC
+  QEMU_AUDIO_DAC_TRY_POLL: boolean, default = 1
+    Attempt using poll mode for DAC
+  QEMU_AUDIO_ADC_FIXED_SETTINGS: boolean, default = 1
+    Use fixed settings for host ADC
+  QEMU_AUDIO_ADC_FIXED_FREQ: integer, default = 44100
+    Frequency for fixed host ADC
+  QEMU_AUDIO_ADC_FIXED_FMT: format, default = S16, (one of: U8 S8 U16 S16 U32 S32)
+    Format for fixed host ADC
+  QEMU_AUDIO_ADC_FIXED_CHANNELS: integer, default = 2
+    Number of channels for fixed ADC (1 - mono, 2 - stereo)
+  QEMU_AUDIO_ADC_VOICES: integer, default = 1
+    Number of voices for ADC
+  QEMU_AUDIO_ADC_TRY_POLL: boolean, default = 1
+    Attempt using poll mode for ADC
+  QEMU_AUDIO_TIMER_PERIOD: integer, default = 100
+    Timer period in HZ (0 - use lowest possible)
+
+Available drivers:
+Name: dsound
+Description: DirectSound http://wikipedia.org/wiki/DirectSound
+Theoretically supports many playback voices
+One capture voice
+Options:
+  QEMU_DSOUND_LATENCY_MILLIS: integer, default = 10
+    (undocumented)
+  QEMU_DSOUND_BUFSIZE_OUT: integer, default = 16384
+    (undocumented)
+  QEMU_DSOUND_BUFSIZE_IN: integer, default = 16384
+    (undocumented)
+
+Name: none
+Description: Timer based audio emulation
+Theoretically supports many playback voices
+Theoretically supports many capture voices
+No options
+
+Name: wav
+Description: WAV renderer http://wikipedia.org/wiki/WAV
+One playback voice
+Does not support capture
+Options:
+  QEMU_WAV_FREQUENCY: integer, default = 44100
+    Frequency
+  QEMU_WAV_FORMAT: format, default = S16, (one of: U8 S8 U16 S16 U32 S32)
+    Format
+  QEMU_WAV_DAC_FIXED_CHANNELS: integer, default = 2
+    Number of channels (1 - mono, 2 - stereo)
+  QEMU_WAV_PATH: string, default = qemu.wav
+    Path to wave file
+
+Options are settable through environment variables.
+Example:
+  set QEMU_AUDIO_DRV=wav
+  set QEMU_WAV_PATH=c:\tune.wav
+  qemu ...
+

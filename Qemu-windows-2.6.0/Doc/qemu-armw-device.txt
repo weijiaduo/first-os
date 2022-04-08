@@ -1,0 +1,2 @@
+C:\Users\lassauge\Mes documents\Qemu-windows\qemu-system-armw.exe: No machine specified, and there is no default
+Use -machine help to list supported machines

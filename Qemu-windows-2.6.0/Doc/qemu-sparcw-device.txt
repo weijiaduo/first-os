@@ -1,0 +1,41 @@
+
+Storage devices:
+name "esp", bus System
+name "isa-fdc", bus ISA
+name "scsi-cd", bus SCSI, desc "virtual SCSI CD-ROM"
+name "scsi-disk", bus SCSI, desc "virtual SCSI disk or CD-ROM (legacy)"
+name "scsi-hd", bus SCSI, desc "virtual SCSI disk"
+name "SUNW,fdtwo", bus System
+name "sysbus-fdc", bus System
+
+Input devices:
+name "escc", bus System
+
+Misc devices:
+name "usb-redir", bus usb-bus
+
+Uncategorized devices:
+name "apc", bus System
+name "cgthree", bus System
+name "eccmemctl", bus System
+name "empty_slot", bus System
+name "fw_cfg", bus System
+name "fw_cfg_io", bus System
+name "fw_cfg_mem", bus System
+name "grlib,apbuart", bus System
+name "grlib,gptimer", bus System
+name "iommu", bus System
+name "isa-m48t59", bus ISA
+name "isabus-bridge", bus System
+name "macio_idreg", bus System
+name "memory", bus System
+name "openprom", bus System
+name "slavio_intctl", bus System
+name "slavio_misc", bus System
+name "slavio_timer", bus System
+name "SUNW,CS4231", bus System
+name "SUNW,tcx", bus System
+name "sysbus-m48t02", bus System
+name "sysbus-m48t08", bus System
+name "sysbus-m48t59", bus System
+name "tcx_afx", bus System

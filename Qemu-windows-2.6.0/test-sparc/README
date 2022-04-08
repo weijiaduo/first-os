@@ -1,0 +1,10 @@
+Demonstration of Sun4M boot emulation using QEMU.
+
+qemu-g    script to launch Linux with an initrd with TCX graphical
+          output
+
+qemu-nog  same with serial output redirected to the host console
+
+linux.img  initrd image containing a sample filesystem with busybox
+
+vmlinux-2.6.11+tcx  Linux kernel

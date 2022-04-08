@@ -1,0 +1,6 @@
+Valid sound card names (comma separated):
+hda         Intel HD Audio
+ac97        Intel 82801AA AC97 Audio
+es1370      ENSONIQ AudioPCI ES1370
+
+-soundhw all will enable all of the above

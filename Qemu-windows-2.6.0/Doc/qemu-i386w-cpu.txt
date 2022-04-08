@@ -1,0 +1,42 @@
+x86           qemu64  QEMU Virtual CPU version 2.5+                   
+x86           phenom  AMD Phenom(tm) 9550 Quad-Core Processor         
+x86         core2duo  Intel(R) Core(TM)2 Duo CPU     T7700  @ 2.40GHz 
+x86            kvm64  Common KVM processor                            
+x86           qemu32  QEMU Virtual CPU version 2.5+                   
+x86            kvm32  Common 32-bit KVM processor                     
+x86          coreduo  Genuine Intel(R) CPU           T2600  @ 2.16GHz 
+x86              486                                                  
+x86          pentium                                                  
+x86         pentium2                                                  
+x86         pentium3                                                  
+x86           athlon  QEMU Virtual CPU version 2.5+                   
+x86             n270  Intel(R) Atom(TM) CPU N270   @ 1.60GHz          
+x86           Conroe  Intel Celeron_4x0 (Conroe/Merom Class Core 2)   
+x86           Penryn  Intel Core 2 Duo P9xxx (Penryn Class Core 2)    
+x86          Nehalem  Intel Core i7 9xx (Nehalem Class Core i7)       
+x86         Westmere  Westmere E56xx/L56xx/X56xx (Nehalem-C)          
+x86      SandyBridge  Intel Xeon E312xx (Sandy Bridge)                
+x86        IvyBridge  Intel Xeon E3-12xx v2 (Ivy Bridge)              
+x86    Haswell-noTSX  Intel Core Processor (Haswell, no TSX)          
+x86          Haswell  Intel Core Processor (Haswell)                  
+x86  Broadwell-noTSX  Intel Core Processor (Broadwell, no TSX)        
+x86        Broadwell  Intel Core Processor (Broadwell)                
+x86       Opteron_G1  AMD Opteron 240 (Gen 1 Class Opteron)           
+x86       Opteron_G2  AMD Opteron 22xx (Gen 2 Class Opteron)          
+x86       Opteron_G3  AMD Opteron 23xx (Gen 3 Class Opteron)          
+x86       Opteron_G4  AMD Opteron 62xx class CPU                      
+x86       Opteron_G5  AMD Opteron 63xx class CPU                      
+
+Recognized CPUID flags:
+  fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 pn clflush ds acpi mmx fxsr sse sse2 ss ht tm ia64 pbe
+  pni|sse3 pclmulqdq|pclmuldq dtes64 monitor ds_cpl vmx smx est tm2 ssse3 cid fma cx16 xtpr pdcm pcid dca sse4.1|sse4_1 sse4.2|sse4_2 x2apic movbe popcnt tsc-deadline aes xsave osxsave avx f16c rdrand hypervisor
+  fsgsbase tsc_adjust bmi1 hle avx2 smep bmi2 erms invpcid rtm mpx avx512f rdseed adx smap pcommit clflushopt clwb avx512pf avx512er avx512cd
+  pku ospke
+  syscall nx|xd mmxext fxsr_opt|ffxsr pdpe1gb rdtscp lm|i64 3dnowext 3dnow
+  lahf_lm cmp_legacy svm extapic cr8legacy abm sse4a misalignsse 3dnowprefetch osvw ibs xop skinit wdt lwp fma4 tce nodeid_msr tbm topoext perfctr_core perfctr_nb
+  invtsc
+  xstore xstore-en xcrypt xcrypt-en ace2 ace2-en phe phe-en pmm pmm-en
+  kvmclock kvm_nopiodelay kvm_mmu kvmclock kvm_asyncpf kvm_steal_time kvm_pv_eoi kvm_pv_unhalt kvmclock-stable-bit
+  npt lbrv svm_lock nrip_save tsc_scale vmcb_clean flushbyasid decodeassists pause_filter pfthreshold
+  xsaveopt xsavec xgetbv1 xsaves
+  arat

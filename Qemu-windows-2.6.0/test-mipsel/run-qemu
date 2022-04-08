@@ -1,0 +1,29 @@
+#!/bin/sh
+#
+set -e
+
+# Set this if your qemu-system-mipsel isn't in the search path.
+#qemupath=/home/ths/qemu/qemu-work/mipsel-softmmu/
+
+# Comment this out if you want to start debian-installer from the initrd
+# (it installs via net from debian mirrors). Make sure to use kernel and
+# initrd images which match the kernel ABI version you will install:
+# vmlinux-2.6.18-3-qemu means kernel version 2.6.18, module ABI revision 3.
+initarg="init=/bin/sh"
+
+# Another useful line for booting an installed image
+#initarg="root=/dev/hda1"
+
+# Maybe define an empty disk image to install Debian onto. The standard
+# install in LVM fails for very small disks, so use e.g.
+# "qemu-img create disk_hda 1G" to create the image.
+#disk_hda="-hda disk_hda"
+
+time \
+${qemupath}qemu-system-mipsel \
+	-kernel vmlinux-2.6.18-3-qemu \
+	-initrd initrd.gz \
+	-append "console=ttyS0 $initarg" \
+	-nographic \
+	-m 128 \
+	$disk_hda

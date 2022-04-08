@@ -1,0 +1,4 @@
+#!/bin/sh
+# Example of SPARC Linux boot with serial console.
+#
+qemu-system-sparc -kernel vmlinux-2.6.11+tcx -initrd linux.img -append "root=/dev/ram console=ttyS0 video=tcxfb:off" -nographic 

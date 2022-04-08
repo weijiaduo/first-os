@@ -1,0 +1,7 @@
+
+Edit qemu-run.sh and point it to your qemu-system-ppc binary.
+Then run the qemu-run.sh script. You should see linux booting
+into a prompt.
+
+To run the selftest programs, run /selftest.sh.
+
