@@ -11,6 +11,8 @@ struct TIMERCTL timerctl;
 void init_pit(void)
 {
   int i;
+  struct TIMER *t;
+
   io_out8(PIT_CTRL, 0x34);
   io_out8(PIT_CNT0, 0x9c);
   io_out8(PIT_CNT0, 0x2e);
@@ -22,6 +24,15 @@ void init_pit(void)
     /* 初始化为未使用 */
     timerctl.timers0[i].flags = 0;
   }
+
+  /* 初始化时添加一个链表哨兵 */
+  t = timer_alloc();
+  t->timeout = 0xffffffff;
+  t->flags = TIMER_FLAGS_USING;
+  t->next_timer = 0;
+  timerctl.t0 = t;
+  timerctl.next_timeout = t->timeout;
+  timerctl.using = 1;
   return;
 }
 
@@ -69,16 +80,6 @@ void timer_settime(struct TIMER *timer, unsigned int timeout)
 
   timerctl.using++;
 
-  /* 第一个定时器，作为链头 */
-  if (timerctl.using == 1)
-  {
-    timer->next_timer = 0;
-    timerctl.t0 = timer;
-    timerctl.next_timeout = timer->timeout;
-    io_store_eflags(e);
-    return;
-  }
-
   /* 插入链头 */
   t = timerctl.t0;
   if (timer->timeout <= t->timeout)
@@ -109,11 +110,6 @@ void timer_settime(struct TIMER *timer, unsigned int timeout)
       return;
     }
   }
-
-  /* 插入链尾 */
-  s->next_timer = timer;
-  timer->next_timer = 0;
-  io_store_eflags(e);
   return;
 }
 
@@ -130,7 +126,7 @@ void inthandler20(int *esp)
     return;
   }
   timer = timerctl.t0;
-  for (i = 0; i < timerctl.using; i++)
+  for (;;)
   {
     /* timers 中的定时器都处于动作中，不需要判断flags */
     if (timer->timeout > timerctl.count)
@@ -142,16 +138,8 @@ void inthandler20(int *esp)
     fifo32_put(timer->fifo, timer->data);
     timer = timer->next_timer;
   }
-  /* 有i个定时器超时了，其他进行移位 */
-  timerctl.using -= i;
+  /* 有i个定时器超时了 */
   timerctl.t0 = timer;
-  if (timerctl.using > 0)
-  {
-    timerctl.next_timeout = timerctl.t0->timeout;
-  }
-  else
-  {
-    timerctl.next_timeout = 0xffffffff;
-  }
+  timerctl.next_timeout = timerctl.t0->timeout;
   return;
 }
