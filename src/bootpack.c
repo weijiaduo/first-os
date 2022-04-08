@@ -160,7 +160,7 @@ void HariMain(void)
 						/* 一般字符，显示后后移光标 */
 						s[0] = keytable[i - 256];
 						s[1] = 0;
-						putfonts_asc_sht(sht_win, cursor_x, 28, COL8_000000, COL8_FFFFFF, s, 1);
+						putfonts_asc_sht(sht_win, cursor_x, 28, COL8_000000, COL8_C6C6C6, s, 1);
 						cursor_x += 8;
 					}
 					if (i == 256 + 0x0e && cursor_x > 8)
@@ -208,6 +208,11 @@ void HariMain(void)
 					
 					/* 移动鼠标位置 */
 					sheet_slide(sht_mouse, mx, my);
+					if ((mdec.btn & 0x01) != 0)
+					{
+						/* 按下左键，移动win窗口 */
+						sheet_slide(sht_win, mx - 80, my - 8);
+					}
 				}
 			}
 			else if (i == 10)
