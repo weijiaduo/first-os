@@ -1,6 +1,8 @@
 #include "bootpack.h"
 #include <stdio.h>
 
+extern struct KEYBUF keybuf;
+
 void HariMain(void)
 {
 	struct BOOTINFO *binfo = (struct BOOTINFO *) ADR_BOOTINFO;
@@ -8,6 +10,7 @@ void HariMain(void)
 	char mcursor[256];
 	int mx;
 	int my;
+	int i;
 
 	/* 初始化段表和中断记录表 */
 	init_gdtidt();
@@ -40,6 +43,20 @@ void HariMain(void)
 
   for (;;)
   {
+		io_cli();
+		if (keybuf.flag == 0)
+		{
+			io_stihlt();
+		}
+		else
+		{
+			i = keybuf.data;
+			keybuf.flag = 0;
+			io_sti();
+			sprintf(s, "%02X", i);
+			boxfill8(binfo->vram, binfo->scrnx, COL8_008484, 0, 16, 15, 31);
+			putfonts8_asc(binfo->vram, binfo->scrnx, 0, 16, COL8_FFFFFF, s);
+		}
     io_hlt();
   }
 }
