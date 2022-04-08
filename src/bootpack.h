@@ -222,12 +222,13 @@ struct TIMER {
 	unsigned int flags;
 	struct FIFO32 *fifo;
 	int data;
+	struct TIMER *next_timer;
 };
 struct TIMERCTL {
 	unsigned int count;
-	unsigned int next;
+	unsigned int next_timeout;
 	unsigned int using;
-	struct TIMER *timers[MAX_TIMER];
+	struct TIMER *t0;
 	struct TIMER timers0[MAX_TIMER];
 };
 extern struct TIMERCTL timerctl;

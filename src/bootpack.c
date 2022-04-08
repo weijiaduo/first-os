@@ -109,7 +109,7 @@ void HariMain(void)
 	sheet_updown(sht_mouse, 2);
 
 	/* 打印字符串变量值 */
-	sprintf(s, "(%3d, %3d)", mx, my);
+	sprintf(s, "(%d, %d)", mx, my);
 	putfonts_asc_sht(sht_back, 0, 0, COL8_FFFFFF, COL8_008484, s, 10);
 
 	/* 内存检查 */
