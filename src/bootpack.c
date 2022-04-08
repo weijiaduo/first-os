@@ -125,7 +125,7 @@ void HariMain(void)
 		io_cli();
 		if (fifo32_status(&fifo) == 0)
 		{
-			io_sti();
+			io_stihlt();
 		}
 		else
 		{
@@ -136,6 +136,9 @@ void HariMain(void)
 				/* 键盘数据 */
 				sprintf(s, "%02X", i - 256);
 				putfonts_asc_sht(sht_back, 0, 16, COL8_FFFFFF, COL8_008484, s, 2);
+				if (i == 0x1e + 256) {
+					putfonts_asc_sht(sht_win, 40, 28, COL8_000000, COL8_C6C6C6, "A", 1);
+				}
 			}
 			else if (512 <= i && i <= 767)
 			{
