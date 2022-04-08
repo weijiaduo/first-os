@@ -1,6 +1,8 @@
 ; haribote-ipl
 ; TAB=4
 
+CYLS  EQU    10         ; 柱面数量10
+
     ORG   0x7c00        ; 指明程序的装载地址
 
 ; 以下这段是标准FAT12格式软盘专用的代码
@@ -45,7 +47,7 @@ entry:
 ; 重试读取磁盘5次
 
 readloop:
-    MOV   SI,0          ; 读取次数
+    MOV   SI,0          ; 读取失败次数
 
 retry:
     MOV   AH,0x02       ; 读盘
@@ -65,16 +67,32 @@ retry:
 
     JMP   retry
 
-; 读取下一个磁盘扇区
+; 读取10个柱面
 
 next:
     MOV   AX,ES         ; 把内存地址往后移动 0x0200
     ADD   AX,0x0020
     MOV   ES,AX         ; 因为没有 ADD ES,0x0020 指令，所以通过 AX 来实现
 
+; 下一个扇区
+
     ADD   CL,1
     CMP   CL,18
     JBE   readloop      ; CL <= 18
+
+; 磁盘另一面同柱面的扇区
+
+    MOV   CL,1
+    ADD   DH,1
+    CMP   DH,2
+    JB    readloop
+
+; 下一个柱面
+
+    MOV   DH,0
+    ADD   CH,1
+    CMP   CH,CYLS
+    JB    readloop
 
 fin:
     HLT                 ; 让CPU停止，等待指令
