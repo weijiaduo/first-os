@@ -41,8 +41,11 @@ void HariMain(void)
 	fifo8_init(&keyfifo, 32, keybuf);
 	fifo8_init(&mousefifo, 128, mousebuf);
 
+	/* 初始化定时器中断 */
+	init_pit();
+
 	/* 启用PIC */
-	io_out8(PIC0_IMR, 0xf9); /* 11111001 启用IRQ1（键盘）和IRQ2 */
+	io_out8(PIC0_IMR, 0xf8); /* 11111000 启用IRQ0（定时器）、IRQ1（键盘）和IRQ2 */
 	io_out8(PIC1_IMR, 0xef); /* 11101111 启用IRQ12（鼠标） */
 
 	/* 初始化键盘控制电路 */
