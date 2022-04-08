@@ -1,6 +1,9 @@
 #include "bootpack.h"
 #include <stdio.h>
 
+unsigned int memtest(unsigned int start, unsigned int end);
+unsigned int memtest_sub(unsigned int start, unsigned int end);
+
 void HariMain(void)
 {
 	struct BOOTINFO *binfo = (struct BOOTINFO *) ADR_BOOTINFO;
@@ -12,7 +15,6 @@ void HariMain(void)
 	int mx;
 	int my;
 	int i;
-	int j;
 
 	/* 初始化段表和中断记录表 */
 	init_gdtidt();
@@ -34,6 +36,9 @@ void HariMain(void)
 	/* 初始化键盘控制电路 */
 	init_keyboard();
 
+	/* 激活鼠标 */
+	enable_mouse(&mdec);
+
 	/* 初始化调色板 */
   init_palette();
   
@@ -50,8 +55,10 @@ void HariMain(void)
 	sprintf(s, "(%d, %d)", mx, my);
 	putfonts8_asc(binfo->vram, binfo->scrnx, 0, 0, COL8_FFFFFF, s);
 
-	/* 激活鼠标 */
-	enable_mouse(&mdec);
+	/* 内存检查 */
+	i = memtest(0x00400000, 0xbfffffff) / (1024 * 1024);
+	sprintf(s, "memory %dMB", i);
+	putfonts8_asc(binfo->vram, binfo->scrnx, 0, 32, COL8_FFFFFF, s);
 
   for (;;)
   {
@@ -121,4 +128,77 @@ void HariMain(void)
 			io_stihlt();
 		}
   }
+}
+
+#define EFLAGS_AC_BIT		0x00040000
+#define CR0_CACHE_DISABLE	0x60000000
+
+unsigned int memtest(unsigned int start, unsigned int end)
+{
+	char flg486 = 0;
+	unsigned int eflg;
+	unsigned int cr0;
+	unsigned i;
+
+	/* 确认CPU是386还是486以上 */
+	eflg = io_load_eflags();
+	eflg |= EFLAGS_AC_BIT; /* AC-bit = 1 */
+	io_store_eflags(eflg);
+	eflg = io_load_eflags();
+	if ((eflg & EFLAGS_AC_BIT) != 0)
+	{
+		/* 如果是386，即使设定AC=1，AC的值还是会自动回到0 */
+		flg486 = 1;
+	}
+	eflg &= ~EFLAGS_AC_BIT; /* AC-bit=0 */
+	io_store_eflags(eflg);
+
+	if (flg486 != 0)
+	{
+		cr0 = load_cr0();
+		cr0 |= CR0_CACHE_DISABLE; /* 禁止缓存 */
+		store_cr0(cr0);
+	}
+
+	i = memtest_sub(start, end);
+
+	if (flg486 != 0)
+	{
+		cr0 = load_cr0();
+		cr0 &= ~CR0_CACHE_DISABLE; /* 允许缓存 */
+		store_cr0(cr0);
+	}
+
+	return i;
+}
+
+unsigned int memtest_sub(unsigned int start, unsigned int end)
+{
+	unsigned int i;
+	unsigned int *p;
+	unsigned int old;
+	unsigned int pat0 = 0xaa55aa55;
+	unsigned int pat1 = 0x55aa55aa;
+
+	for (i = start; i <= end; i += 0x1000)
+	{
+		p = (unsigned int *) (i + 0xffc);
+		old = *p;         /* 记住旧值 */
+		*p = pat0;        /* 试写 */
+		*p ^= 0xffffffff; /* 反转 */
+		if (*p != pat1)   /* 检查反转结果 */
+		{
+not_memory:
+      *p = old;
+			break;
+		}
+		*p ^= 0xffffffff; /* 再次反转 */
+		if (*p != pat0)   /* 检查值是否恢复 */
+		{
+			goto not_memory;
+		}
+		*p = old;         /* 恢复为旧值 */
+	}
+
+	return i;
 }
