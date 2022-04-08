@@ -29,6 +29,15 @@ void HariMain(void)
 	struct SHEET *sht_win;
 	unsigned char *buf_win;
 
+	static char keytable[0x54] = {
+		0,   0,   '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '^', 0,   0,
+		'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '@', '[', 0,   0,   'A', 'S',
+		'D', 'F', 'G', 'H', 'J', 'K', 'L', ';', ':', 0,   0,   ']', 'Z', 'X', 'C', 'V',
+		'B', 'N', 'M', ',', '.', '/', 0,   '*', 0,   ' ', 0,   0,   0,   0,   0,   0,
+		0,   0,   0,   0,   0,   0,   0,   '7', '8', '9', '-', '4', '5', '6', '+', '1',
+		'2', '3', '0', '.'
+	};
+
 	int mx, my, i, count;
 
 	/* 初始化段表和中断记录表 */
@@ -136,8 +145,14 @@ void HariMain(void)
 				/* 键盘数据 */
 				sprintf(s, "%02X", i - 256);
 				putfonts_asc_sht(sht_back, 0, 16, COL8_FFFFFF, COL8_008484, s, 2);
-				if (i == 0x1e + 256) {
-					putfonts_asc_sht(sht_win, 40, 28, COL8_000000, COL8_C6C6C6, "A", 1);
+				if (i < 256 + 0x54)
+				{
+					if (keytable[i - 256] != 0)
+					{
+						s[0] = keytable[i - 256];
+						s[1] = 0;
+						putfonts_asc_sht(sht_win, 40, 28, COL8_000000, COL8_C6C6C6, s, 1);
+					}
 				}
 			}
 			else if (512 <= i && i <= 767)
