@@ -1,4 +1,5 @@
 /** asmhead.nas */
+#define ADR_BOOTINFO 0x00000ff0
 struct BOOTINFO {
 	char cyls;    /* 启动区磁盘读到何处为止 */
 	char leds;    /* 启动时键盘LED的状态 */
@@ -8,7 +9,6 @@ struct BOOTINFO {
 	short scrny;
 	char *vram;
 };
-#define ADR_BOOTINFO 0x00000ff0
 
 
 /** naskfunc.nas */
@@ -46,21 +46,6 @@ int fifo8_status(struct FIFO8 *fifo);
 
 /** graphic.c */
 /* 调色板 */
-void init_palette(void);
-void set_palette(int start, int end, unsigned char *rgb);
-
-/* 绘制 */
-void boxfill8(unsigned char *vram, int xsize, unsigned char c, int x0, int y0, int x1, int y1);
-void init_screen8(char *vram, int x, int y);
-
-/* 打印 */
-void putfont8(char *vram, int xsize, int x, int y, char c, char *font);
-void putfonts8_asc(char *vram, int xsize, int x, int y, char c, unsigned char *s);
-
-/* 鼠标 */
-void init_mouse_cursor8(char *mouse, char bc);
-void putblock8_8(char *vram, int vxsize, int pxsize, int pysize, int px0, int py0, char *buf, int bxsize);
-
 #define COL8_000000		0
 #define COL8_FF0000		1
 #define COL8_00FF00		2
@@ -78,9 +63,34 @@ void putblock8_8(char *vram, int vxsize, int pxsize, int pysize, int px0, int py
 #define COL8_008484		14
 #define COL8_848484		15
 
+void init_palette(void);
+void set_palette(int start, int end, unsigned char *rgb);
+
+/* 绘制 */
+void boxfill8(unsigned char *vram, int xsize, unsigned char c, int x0, int y0, int x1, int y1);
+void init_screen8(char *vram, int x, int y);
+
+/* 打印 */
+void putfont8(char *vram, int xsize, int x, int y, char c, char *font);
+void putfonts8_asc(char *vram, int xsize, int x, int y, char c, unsigned char *s);
+
+/* 鼠标 */
+void init_mouse_cursor8(char *mouse, char bc);
+void putblock8_8(char *vram, int vxsize, int pxsize, int pysize, int px0, int py0, char *buf, int bxsize);
+
 
 /** dsctbl.c */
 /* 段表、中断记录表 */
+#define ADR_IDT			0x0026f800
+#define LIMIT_IDT		0x000007ff
+#define ADR_GDT			0x00270000
+#define LIMIT_GDT		0x0000ffff
+#define ADR_BOTPAK		0x00280000
+#define LIMIT_BOTPAK	0x0007ffff
+#define AR_DATA32_RW	0x4092
+#define AR_CODE32_ER	0x409a
+#define AR_INTGATE32	0x008e
+
 struct SEGMENT_DESCRIPTOR {
 	short limit_low;
 	short base_low;
@@ -102,22 +112,8 @@ void init_gdtidt(void);
 void set_segmdesc(struct SEGMENT_DESCRIPTOR *sd, unsigned int limit, int base, int ar);
 void set_gatedesc(struct GATE_DESCRIPTOR *gd, int offset, int selector, int ar);
 
-#define ADR_IDT			0x0026f800
-#define LIMIT_IDT		0x000007ff
-#define ADR_GDT			0x00270000
-#define LIMIT_GDT		0x0000ffff
-#define ADR_BOTPAK		0x00280000
-#define LIMIT_BOTPAK	0x0007ffff
-#define AR_DATA32_RW	0x4092
-#define AR_CODE32_ER	0x409a
-#define AR_INTGATE32	0x008e
-
 
 /** int.c */
-void init_pic(void);
-void inthandler21(int *esp);
-void inthandler27(int *esp);
-void inthandler2c(int *esp);
 #define PIC0_ICW1		0x0020
 #define PIC0_OCW2		0x0020
 #define PIC0_IMR		0x0021
@@ -130,3 +126,33 @@ void inthandler2c(int *esp);
 #define PIC1_ICW2		0x00a1
 #define PIC1_ICW3		0x00a1
 #define PIC1_ICW4		0x00a1
+
+void init_pic(void);
+void inthandler21(int *esp);
+void inthandler27(int *esp);
+void inthandler2c(int *esp);
+
+
+/** keyboard.c */
+extern struct FIFO8 keyfifo;
+#define PORT_KEYDAT		0x0060
+#define PORT_KEYCMD		0x0064
+
+void inthandler21(int *esp);
+void wait_KBC_sendready(void);
+void init_keyboard(void);
+
+
+/** mouse.c */
+extern struct FIFO8 mousefifo;
+struct MOUSE_DEC {
+	unsigned char buf[3];
+	unsigned char phase;
+	int x;
+	int y;
+	int btn;
+};
+
+void inthandler2c(int *esp);
+void enable_mouse(struct MOUSE_DEC *mdec);
+int mouse_decode(struct MOUSE_DEC *mdec, unsigned char dat);

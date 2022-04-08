@@ -1,11 +1,6 @@
 #include "bootpack.h"
 #include<stdio.h>
 
-#define PORT_KEYDAT		0x0060
-
-struct FIFO8 keyfifo;
-struct FIFO8 mousefifo;
-
 /** PIC的初始化 */
 void init_pic(void)
 {
@@ -25,35 +20,6 @@ void init_pic(void)
   io_out8(PIC0_IMR, 0xfb);    /* 11111011 PIC1以外全部禁止 */
   io_out8(PIC1_IMR, 0xff);    /* 11111111 禁止所有中断 */
 
-  return;
-}
-
-/**
- * 21号中断处理程序
- * PS/2键盘的中断
- */ 
-void inthandler21(int *esp)
-{
-  unsigned char data;
-  io_out8(PIC0_OCW2, 0x61); /* 通知PIC"IRQ-01已经受理完毕" */
-  
-  data = io_in8(PORT_KEYDAT); /* 获取键盘中断数据 */
-  fifo8_put(&keyfifo, data);
-  return;
-}
-
-/**
- * 2c号中断处理程序
- * PS/2 鼠标的中断
- */ 
-void inthandler2c(int *esp)
-{
-  unsigned char data;
-  io_out8(PIC1_OCW2, 0x64); /* 通知PIC1 IRQ-12的受理已完成 */
-  io_out8(PIC0_OCW2, 0x62); /* 通知PIC0 IRQ-02的受理已完成 */
-
-  data = io_in8(PORT_KEYDAT);
-  fifo8_put(&mousefifo, data);
   return;
 }
 
