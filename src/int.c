@@ -1,4 +1,7 @@
 #include "bootpack.h"
+#include<stdio.h>
+
+#define PORT_KEYDAT		0x0060
 
 /** PIC的初始化 */
 void init_pic(void)
@@ -29,13 +32,18 @@ void init_pic(void)
 void inthandler21(int *esp)
 {
   struct BOOTINFO *binfo = (struct BOOTINFO *) ADR_BOOTINFO;
-  boxfill8(binfo->vram, binfo->scrnx, COL8_000000, 0, 0, 32 * 8 - 1, 15);
-  putfonts8_asc(binfo->vram, binfo->scrnx, 0, 0, COL8_FFFFFF, "INT21 (IRQ-1) : PS/2 keyboard");
+  unsigned char data;
+  unsigned char s[4];
 
-  for (;;)
-  {
-    io_hlt();
-  }
+  io_out8(PIC0_OCW2, 0x61); /* 通知PIC"IRQ-01已经受理完毕" */
+
+  data = io_in8(PORT_KEYDAT); /* 获取键盘中断数据 */
+
+  sprintf(s, "%02X", data);
+  boxfill8(binfo->vram, binfo->scrnx, COL8_000000, 0, 16, 15, 31);
+  putfonts8_asc(binfo->vram, binfo->scrnx, 0, 16, COL8_FFFFFF, s);
+
+  return;
 }
 
 /**
