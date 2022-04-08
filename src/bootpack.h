@@ -29,6 +29,8 @@ void store_cr0(int cr0);
 
 void load_tr(int tr);
 
+/* 任务切换 */
+void taskswitch3(void);
 void taskswitch4(void);
 
 /* 中断处理函数 */
@@ -253,3 +255,5 @@ struct TSS32 {
 	int es, cs, ss, ds, fs, gs;
 	int ldtr, iomap;
 };
+
+void task_b_main(void);

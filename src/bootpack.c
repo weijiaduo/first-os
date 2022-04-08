@@ -6,8 +6,6 @@ void make_window8(unsigned char *buf, int xsize, int ysize, char *title);
 void putfonts_asc_sht(struct SHEET *sht, int x, int y, int c, int b, char *s, int l);
 void make_textbox8(struct SHEET *sht, int x0, int y0, int sx, int sy, int c);
 
-void task_b_main(void);
-
 void HariMain(void)
 {
 	struct BOOTINFO *binfo = (struct BOOTINFO *) ADR_BOOTINFO;
@@ -133,7 +131,7 @@ void HariMain(void)
 	sheet_updown(sht_mouse, 2);
 
 	/* 打印字符串变量值 */
-	sprintf(s, "(%3d, %3d)", mx, my);
+	sprintf(s, "(%d, %d)", mx, my);
 	putfonts_asc_sht(sht_back, 0, 0, COL8_FFFFFF, COL8_008484, s, 10);
 
 	/* 内存检查 */
@@ -365,5 +363,26 @@ void make_textbox8(struct SHEET *sht, int x0, int y0, int sx, int sy, int c)
 
 void task_b_main(void)
 {
-	for (;;) { io_hlt(); }
+	struct FIFO32 fifo;
+	struct TIMER *timer;
+	int i, fifobuf[128];
+
+	fifo32_init(&fifo, 128, fifobuf);
+	timer = timer_alloc();
+	timer_init(timer, &fifo, 1);
+	timer_settime(timer, 500);
+
+	for (;;) {
+		io_cli();
+		if (fifo32_status(&fifo) == 0) {
+			io_sti();
+			io_hlt();
+		} else {
+			i = fifo32_get(&fifo);
+			io_sti();
+			if (i == 1) { /* 超时时间为5秒 */
+				taskswitch3(); /* 切换回任务A */
+			}
+		}
+	}
 }
