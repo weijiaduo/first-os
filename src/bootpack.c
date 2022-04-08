@@ -2,7 +2,6 @@
 #include <stdio.h>
 
 unsigned int memtest(unsigned int start, unsigned int end);
-unsigned int memtest_sub(unsigned int start, unsigned int end);
 
 void HariMain(void)
 {
@@ -167,37 +166,6 @@ unsigned int memtest(unsigned int start, unsigned int end)
 		cr0 = load_cr0();
 		cr0 &= ~CR0_CACHE_DISABLE; /* 允许缓存 */
 		store_cr0(cr0);
-	}
-
-	return i;
-}
-
-unsigned int memtest_sub(unsigned int start, unsigned int end)
-{
-	unsigned int i;
-	unsigned int *p;
-	unsigned int old;
-	unsigned int pat0 = 0xaa55aa55;
-	unsigned int pat1 = 0x55aa55aa;
-
-	for (i = start; i <= end; i += 0x1000)
-	{
-		p = (unsigned int *) (i + 0xffc);
-		old = *p;         /* 记住旧值 */
-		*p = pat0;        /* 试写 */
-		*p ^= 0xffffffff; /* 反转 */
-		if (*p != pat1)   /* 检查反转结果 */
-		{
-not_memory:
-      *p = old;
-			break;
-		}
-		*p ^= 0xffffffff; /* 再次反转 */
-		if (*p != pat0)   /* 检查值是否恢复 */
-		{
-			goto not_memory;
-		}
-		*p = old;         /* 恢复为旧值 */
 	}
 
 	return i;
