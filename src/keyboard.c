@@ -7,7 +7,8 @@
 #define KEYCMD_WRITE_MODE		0x60
 #define KBC_MODE				0x47
 
-struct FIFO8 keyfifo;
+struct FIFO32 *keyfifo;
+int keyboard0;
 
 /**
  * 21号中断处理程序
@@ -15,11 +16,11 @@ struct FIFO8 keyfifo;
  */ 
 void inthandler21(int *esp)
 {
-  unsigned char data;
+  int data;
   io_out8(PIC0_OCW2, 0x61); /* 通知PIC"IRQ-01已经受理完毕" */
   
   data = io_in8(PORT_KEYDAT); /* 获取键盘中断数据 */
-  fifo8_put(&keyfifo, data);
+  fifo32_put(keyfifo, data + keyboard0);
   return;
 }
 
@@ -37,8 +38,11 @@ void wait_KBC_sendready(void)
 }
 
 /** 初始化键盘 */
-void init_keyboard(void)
+void init_keyboard(struct FIFO32 *fifo, int data0)
 {
+	/* 把缓存信息保存到全局变量 */
+	keyfifo = fifo;
+	keyboard0 = data0;
 	wait_KBC_sendready();
 	io_out8(PORT_KEYCMD, KEYCMD_WRITE_MODE);
 	wait_KBC_sendready();

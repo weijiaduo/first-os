@@ -48,7 +48,7 @@ void timer_free(struct TIMER *timer)
 }
 
 /* 初始化定时器 */
-void timer_init(struct TIMER *timer, struct FIFO8 *fifo, unsigned char data)
+void timer_init(struct TIMER *timer, struct FIFO32 *fifo, int data)
 {
   timer->fifo = fifo;
   timer->data = data;
@@ -104,7 +104,7 @@ void inthandler20(int *esp)
     }
     /* 超时 */
     timerctl.timers[i]->flags = TIMER_FLAGS_ALLOC;
-    fifo8_put(timerctl.timers[i]->fifo, timerctl.timers[i]->data);
+    fifo32_put(timerctl.timers[i]->fifo, timerctl.timers[i]->data);
   }
   /* 有i个定时器超时了，其他进行移位 */
   timerctl.using -= i;
