@@ -8,9 +8,13 @@ void HariMain(void)
 {
 	struct BOOTINFO *binfo = (struct BOOTINFO *) ADR_BOOTINFO;
 	char s[40];
+	
 	char keybuf[32];
 	char mousebuf[128];
 	struct MOUSE_DEC mdec;
+
+	struct FIFO8 timerfifo;
+	char timerbuf[8];
 
 	unsigned int memtotal;
 	struct MEMMAN *memman = (struct MEMMAN *) MEMMAN_ADDR;
@@ -36,12 +40,14 @@ void HariMain(void)
 	/* 允许CPU接收来自外部设备的中断 */
 	io_sti();
 
+	/* 初始化定时器中断 */
+	init_pit();
+
 	/* 初始化键盘输入和鼠标输入的缓冲区 */
 	fifo8_init(&keyfifo, 32, keybuf);
 	fifo8_init(&mousefifo, 128, mousebuf);
-
-	/* 初始化定时器中断 */
-	init_pit();
+	fifo8_init(&timerfifo, 8, timerbuf);
+	settimer(1000, &timerfifo, 1);
 
 	/* 启用PIC */
 	io_out8(PIC0_IMR, 0xf8); /* 11111000 启用IRQ0（定时器）、IRQ1（键盘）和IRQ2 */
@@ -165,6 +171,13 @@ void HariMain(void)
 				/* 移动鼠标位置 */
 				sheet_slide(sht_mouse, mx, my);
 			}
+		}
+		else if (fifo8_status(&timerfifo) != 0)
+		{
+			i = fifo8_get(&timerfifo);
+			io_sti();
+			putfonts8_asc(buf_back, binfo->scrnx, 0, 64, COL8_FFFFFF, "10[sec]");
+			sheet_refresh(sht_back, 0, 64, 56, 80);
 		}
 		else
 		{
