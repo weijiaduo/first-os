@@ -12,7 +12,10 @@ void HariMain(void)
 	/* 初始化段表和中断记录表 */
 	init_gdtidt();
 
-	/* 设定调色板 */
+	/* 初始化PIC */
+	init_pic();
+
+	/* 初始化调色板 */
   init_palette();
   
 	/* 初始化屏幕 */
