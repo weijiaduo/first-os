@@ -41,21 +41,13 @@ struct BOOTINFO {
 
 void HariMain(void)
 {
-  char *vram;
-	int xsize, ysize;
-	struct BOOTINFO *binfo;
+	struct BOOTINFO *binfo = (struct BOOTINFO *) 0x0ff0;
 
 	/* 设定调色板 */
   init_palette();
-
-	/* 获取显卡内存地址以及屏幕大小 */
-	binfo = (struct BOOTINFO *) 0x0ff0;
-	xsize = (*binfo).scrnx;
-	ysize = (*binfo).scrny;
-	vram = (*binfo).vram;
   
 	/* 初始化屏幕 */
-  init_screen(vram, xsize, ysize);
+  init_screen(binfo->vram, binfo->scrnx, binfo->scrny);
 
   for (;;)
   {
