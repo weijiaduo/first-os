@@ -2,6 +2,7 @@
 #include <stdio.h>
 
 extern struct FIFO8 keyfifo;
+extern struct FIFO8 mousefifo;
 
 void enable_mouse(void);
 void init_keyboard(void);
@@ -12,6 +13,7 @@ void HariMain(void)
 	char s[40];
 	char mcursor[256];
 	char keybuf[32];
+	char mousebuf[128];
 	int mx;
 	int my;
 	int i;
@@ -26,8 +28,9 @@ void HariMain(void)
 	/* 允许CPU接收来自外部设备的中断 */
 	io_sti();
 
-	/* 初始化键盘输入缓冲区 */
+	/* 初始化键盘输入和鼠标输入的缓冲区 */
 	fifo8_init(&keyfifo, 32, keybuf);
+	fifo8_init(&mousefifo, 128, mousebuf);
 
 	/* 启用PIC */
 	io_out8(PIC0_IMR, 0xf9); /* 11111001 启用IRQ1（键盘）和IRQ2 */
@@ -58,19 +61,28 @@ void HariMain(void)
   for (;;)
   {
 		io_cli();
-		if (fifo8_status(&keyfifo) == 0)
+		if (fifo8_status(&keyfifo) != 0)
 		{
-			io_stihlt();
-		}
-		else
-		{
+			/* 键盘数据 */
 			i = fifo8_get(&keyfifo);
 			io_sti();
 			sprintf(s, "%02X", i);
 			boxfill8(binfo->vram, binfo->scrnx, COL8_008484, 0, 16, 15, 31);
 			putfonts8_asc(binfo->vram, binfo->scrnx, 0, 16, COL8_FFFFFF, s);
 		}
-    io_hlt();
+		else if (fifo8_status(&mousefifo) != 0)
+		{
+			/* 鼠标数据 */
+			i = fifo8_get(&mousefifo);
+			io_sti();
+			sprintf(s, "%02X", i);
+			boxfill8(binfo->vram, binfo->scrnx, COL8_008484, 32, 16, 47, 31);
+			putfonts8_asc(binfo->vram, binfo->scrnx, 32, 16, COL8_FFFFFF, s);
+		}
+		else
+		{
+			io_stihlt();
+		}
   }
 }
 
