@@ -2,7 +2,7 @@
 
 #include "bootpack.h"
 
-void make_window8(unsigned char *buf, int xsize, int ysize, char *title);
+void make_window8(unsigned char *buf, int xsize, int ysize, char *title, char act);
 void putfonts_asc_sht(struct SHEET *sht, int x, int y, int c, int b, char *s, int l);
 void make_textbox8(struct SHEET *sht, int x0, int y0, int sx, int sy, int c);
 
@@ -15,7 +15,7 @@ void HariMain(void)
 	int fifobuf[128];
 
 	struct MOUSE_DEC mdec;
-	struct TIMER *timer, *timer2, *timer3, *timer_ts;
+	struct TIMER *timer;
 
 	unsigned int memtotal;
 	struct MEMMAN *memman = (struct MEMMAN *) MEMMAN_ADDR;
@@ -30,6 +30,10 @@ void HariMain(void)
 	struct SHEET *sht_win;
 	unsigned char *buf_win;
 
+	/* 多窗口测试 */
+	struct SHEET *sht_win_b[3];
+	unsigned char *buf_win_b;
+
 	static char keytable[0x54] = {
 		0,   0,   '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '^', 0,   0,
 		'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '@', '[', 0,   0,   'A', 'S',
@@ -40,7 +44,7 @@ void HariMain(void)
 	};
 
 	/* 多任务 */
-	struct TASK *task_a, *task_b;
+	struct TASK *task_a, *task_b[3];
 
 	int mx, my, i;
 	int cursor_x, cursor_c;
@@ -72,21 +76,8 @@ void HariMain(void)
 
 	/* 初始化定时器缓冲区 */
 	timer = timer_alloc();
-	timer_init(timer, &fifo, 10);
-	timer_settime(timer, 1000);
-
-	timer2 = timer_alloc();
-	timer_init(timer2, &fifo, 3);
-	timer_settime(timer2, 300);
-
-	timer3 = timer_alloc();
-	timer_init(timer3, &fifo, 1);
-	timer_settime(timer3, 50);
-
-	/* 多任务定时器 */
-	timer_ts = timer_alloc();
-	timer_init(timer_ts, &fifo, 2);
-	timer_settime(timer_ts, 2);
+	timer_init(timer, &fifo, 1);
+	timer_settime(timer, 50);
 
 	/* 内存管理 */
 	memtotal = memtest(0x00400000, 0xbfffffff);
@@ -97,64 +88,81 @@ void HariMain(void)
 	/* 初始化调色板 */
   init_palette();
 
-	/* 初始化图层 */
-	shtctl = shtctl_init(memman, binfo->vram, binfo->scrnx, binfo->scrny);
-	sht_back = sheet_alloc(shtctl);
-	sht_mouse = sheet_alloc(shtctl);
-	sht_win = sheet_alloc(shtctl);
-	buf_back = (unsigned char *) memman_alloc_4k(memman, binfo->scrnx * binfo->scrny);
-	buf_win = (unsigned char *) memman_alloc_4k(memman, 160 * 52);
-	sheet_setbuf(sht_back, buf_back, binfo->scrnx, binfo->scrny, -1);
-	sheet_setbuf(sht_mouse, buf_mouse, 16, 16, 99);
-	sheet_setbuf(sht_win, buf_win, 160, 52, -1);
-  
-	/* 初始化屏幕 */
-  init_screen8(buf_back, binfo->scrnx, binfo->scrny);
-	sheet_slide(sht_back, 0, 0);
-
-	/* 初始化鼠标 */
-	init_mouse_cursor8(buf_mouse, 99);
-	mx = (binfo->scrnx - 16) / 2;
-	my = (binfo->scrny - 28 - 16) / 2;
-	sheet_slide(sht_mouse, mx, my);
-
-	/* 初始化窗口 */
-	make_window8(buf_win, 160, 52, "window");
-	sheet_slide(sht_win, 80, 72);
-
-	/* 初始化输入框 */
-	make_textbox8(sht_win, 8, 28, 144, 16, COL8_FFFFFF);
-	cursor_x = 8;
-	cursor_c = COL8_FFFFFF;
-
-	/* 设置背景图层和鼠标图层 */
-	sheet_updown(sht_back,  0);
-	sheet_updown(sht_win, 1);
-	sheet_updown(sht_mouse, 2);
-
-	/* 打印字符串变量值 */
-	sprintf(s, "(%d, %d)", mx, my);
-	putfonts_asc_sht(sht_back, 0, 0, COL8_FFFFFF, COL8_008484, s, 10);
-
-	/* 内存检查 *
-	sprintf(s, "memory %dMB   free : %dKB",
-			memtotal / (1024 * 1024), memman_total(memman) / 1024);
-	putfonts_asc_sht(sht_back, 0, 32, COL8_FFFFFF, COL8_008484, s, 40);
-
 	/* 多任务测试 */
 	task_a = task_init(memman);
 	fifo.task = task_a;
-	task_b = task_alloc();
-	task_b->tss.esp = memman_alloc_4k(memman, 64 * 1024) + 64 * 1024 - 8;
-	task_b->tss.eip = (int) &task_b_main;
-	task_b->tss.es = 1 * 8;
-	task_b->tss.cs = 2 * 8;
-	task_b->tss.ss = 1 * 8;
-	task_b->tss.ds = 1 * 8;
-	task_b->tss.fs = 1 * 8;
-	task_b->tss.gs = 1 * 8;
-	*((int *) (task_b->tss.esp + 4)) = (int) sht_back;
-	task_run(task_b);
+
+	/* 初始化图层 */
+	shtctl = shtctl_init(memman, binfo->vram, binfo->scrnx, binfo->scrny);
+
+	/* 背景图层 */
+	sht_back = sheet_alloc(shtctl);
+	buf_back = (unsigned char *) memman_alloc_4k(memman, binfo->scrnx * binfo->scrny);
+	sheet_setbuf(sht_back, buf_back, binfo->scrnx, binfo->scrny, -1);
+	init_screen8(buf_back, binfo->scrnx, binfo->scrny);
+
+	/* 测试多任务窗口图层 */
+	for (i = 0; i < 3; i++)
+	{
+		sht_win_b[i] = sheet_alloc(shtctl);
+		buf_win_b = (unsigned char *) memman_alloc_4k(memman, 114 * 52);
+		sheet_setbuf(sht_win_b[i], buf_win_b, 144, 52, -1); /* 透明色 */
+		sprintf(s, "task_b%d", i);
+		make_window8(buf_win_b, 144, 52, s, 0);
+
+		/* 多任务 */
+		task_b[i] = task_alloc();
+		task_b[i]->tss.esp = memman_alloc_4k(memman, 64 * 1024) + 64 * 1024 - 8;
+		task_b[i]->tss.eip = (int) &task_b_main;
+		task_b[i]->tss.es = 1 * 8;
+		task_b[i]->tss.cs = 2 * 8;
+		task_b[i]->tss.ss = 1 * 8;
+		task_b[i]->tss.ds = 1 * 8;
+		task_b[i]->tss.fs = 1 * 8;
+		task_b[i]->tss.gs = 1 * 8;
+		*((int *) (task_b[i]->tss.esp + 4)) = (int) sht_win_b[i];
+		task_run(task_b[i]);
+	}
+
+	/* 主窗口图层 */
+	sht_win = sheet_alloc(shtctl);
+	buf_win = (unsigned char *) memman_alloc_4k(memman, 160 * 52);
+	sheet_setbuf(sht_win, buf_win, 144, 52, -1);
+	make_window8(buf_win, 144, 52, "task_a", 1);
+	/* 初始化输入框 */
+	make_textbox8(sht_win, 8, 28, 128, 16, COL8_FFFFFF);
+	cursor_x = 8;
+	cursor_c = COL8_FFFFFF;
+
+	/* 鼠标图层 */
+	sht_mouse = sheet_alloc(shtctl);
+	sheet_setbuf(sht_mouse, buf_mouse, 16, 16, 99);
+	init_mouse_cursor8(buf_mouse, 99);
+	mx = (binfo->scrnx - 16) / 2;
+	my = (binfo->scrny - 28 - 16) / 2;
+
+	/* 设置图层位置和层级 */
+	sheet_slide(sht_back, 0, 0);
+	sheet_slide(sht_win_b[0], 168, 56);
+	sheet_slide(sht_win_b[1], 8, 116);
+	sheet_slide(sht_win_b[2], 168, 116);
+	sheet_slide(sht_win, 8, 56);
+	sheet_slide(sht_mouse, mx, my);
+	sheet_updown(sht_back,  0);
+	sheet_updown(sht_win_b[0], 1);
+	sheet_updown(sht_win_b[1], 2);
+	sheet_updown(sht_win_b[2], 3);
+	sheet_updown(sht_win, 4);
+	sheet_updown(sht_mouse, 5);
+
+	/* 打印鼠标位置 */
+	sprintf(s, "(%3d, %3d)", mx, my);
+	putfonts_asc_sht(sht_back, 0, 0, COL8_FFFFFF, COL8_008484, s, 10);
+
+	/* 内存检查 */
+	sprintf(s, "memory %dMB   free : %dKB",
+			memtotal / (1024 * 1024), memman_total(memman) / 1024);
+	putfonts_asc_sht(sht_back, 0, 32, COL8_FFFFFF, COL8_008484, s, 40);
 
   for (;;)
   {
@@ -235,30 +243,20 @@ void HariMain(void)
 					}
 				}
 			}
-			else if (i == 10)
-			{
-				/* 10秒定时器 */
-				putfonts_asc_sht(sht_back, 0, 64, COL8_FFFFFF, COL8_008484, "10[sec]", 7);
-			}
-			else if (i == 3)
-			{
-				/* 3秒定时器 */
-				putfonts_asc_sht(sht_back, 0, 80, COL8_FFFFFF, COL8_008484, "3[sec]", 6);
-			}
 			else if (i == 1)
 			{
-				/* 光标定时器 */
-				timer_init(timer3, &fifo, 0);
-				timer_settime(timer3, 50);
+				/* 光标定时器（白） */
+				timer_init(timer, &fifo, 0);
+				timer_settime(timer, 50);
 				cursor_c = COL8_000000;
 				boxfill8(sht_win->buf, sht_win->bxsize, cursor_c, cursor_x, 28, cursor_x + 7, 43);
 				sheet_refresh(sht_win, cursor_x, 28, cursor_x + 8, 44);
 			}
 			else if (i == 0)
 			{
-				/* 光标定时器 */
-				timer_init(timer3, &fifo, 1);
-				timer_settime(timer3, 50);
+				/* 光标定时器（黑） */
+				timer_init(timer, &fifo, 1);
+				timer_settime(timer, 50);
 				cursor_c = COL8_FFFFFF;
 				boxfill8(sht_win->buf, sht_win->bxsize, cursor_c, cursor_x, 28, cursor_x + 7, 43);
 				sheet_refresh(sht_win, cursor_x, 28, cursor_x + 8, 44);
@@ -267,7 +265,7 @@ void HariMain(void)
   }
 }
 
-void make_window8(unsigned char *buf, int xsize, int ysize, char *title)
+void make_window8(unsigned char *buf, int xsize, int ysize, char *title, char act)
 {
 	static char closebtn[14][16] = {
 		"OOOOOOOOOOOOOOO@",
@@ -288,6 +286,17 @@ void make_window8(unsigned char *buf, int xsize, int ysize, char *title)
 
 	int x, y;
 	char c;
+	char tc, tbc;
+	if (act != 0)
+	{
+		tc = COL8_FFFFFF;
+		tbc = COL8_000084;
+	}
+	else
+	{
+		tc = COL8_C6C6C6;
+		tbc = COL8_848484;
+	}
 	boxfill8(buf, xsize, COL8_C6C6C6, 0,         0,         xsize - 1, 0        );
 	boxfill8(buf, xsize, COL8_FFFFFF, 1,         1,         xsize - 2, 1        );
 	boxfill8(buf, xsize, COL8_C6C6C6, 0,         0,         0,         ysize - 1);
@@ -295,11 +304,11 @@ void make_window8(unsigned char *buf, int xsize, int ysize, char *title)
 	boxfill8(buf, xsize, COL8_848484, xsize - 2, 1,         xsize - 2, ysize - 2);
 	boxfill8(buf, xsize, COL8_000000, xsize - 1, 0,         xsize - 1, ysize - 1);
 	boxfill8(buf, xsize, COL8_C6C6C6, 2,         2,         xsize - 3, ysize - 3);
-	boxfill8(buf, xsize, COL8_000084, 3,         3,         xsize - 4, 20       );
+	boxfill8(buf, xsize, tbc,         3,         3,         xsize - 4, 20       );
 	boxfill8(buf, xsize, COL8_848484, 1,         ysize - 2, xsize - 2, ysize - 2);
 	boxfill8(buf, xsize, COL8_000000, 0,         ysize - 1, xsize - 1, ysize - 1);
 
-	putfonts8_asc(buf, xsize, 24, 4, COL8_FFFFFF, title);
+	putfonts8_asc(buf, xsize, 24, 4, tc, title);
 	for (y = 0; y < 14; y++)
 	{
 		for (x = 0; x < 16; x++)
@@ -352,19 +361,16 @@ void make_textbox8(struct SHEET *sht, int x0, int y0, int sx, int sy, int c)
 	return;
 }
 
-void task_b_main(struct SHEET *sht_back)
+void task_b_main(struct SHEET *sht_win_b)
 {
 	struct FIFO32 fifo;
-	struct TIMER *timer_put, *timer_1s;
+	struct TIMER *timer_1s;
 	int fifobuf[128];
 	int i, count = 0, count0 = 0;
 	char s[12];
 
 	fifo32_init(&fifo, 128, fifobuf, 0);
 
-	timer_put = timer_alloc();
-	timer_init(timer_put, &fifo, 1);
-	timer_settime(timer_put, 1);
 	timer_1s = timer_alloc();
 	timer_init(timer_1s, &fifo, 100);
 	timer_settime(timer_1s, 100);
@@ -381,17 +387,10 @@ void task_b_main(struct SHEET *sht_back)
 		{
 			i = fifo32_get(&fifo);
 			io_sti();
-			if (i == 1) 
-			{
-				/* 打印计数 */
-				sprintf(s, "%11d", count);
-				putfonts_asc_sht(sht_back, 0, 144, COL8_FFFFFF, COL8_008484, s, 11);
-				timer_settime(timer_put, 1);
-			}
-			else if (i == 100) 
+			if (i == 100) 
 			{
 				sprintf(s, "%11d", count - count0);
-				putfonts_asc_sht(sht_back, 0, 128, COL8_FFFFFF, COL8_008484, s, 11);
+				putfonts_asc_sht(sht_win_b, 24, 28, COL8_000000, COL8_C6C6C6, s, 11);
 				count0 = count;
 				timer_settime(timer_1s, 100);
 			}
