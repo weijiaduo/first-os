@@ -88,8 +88,8 @@ void HariMain(void)
 
 	/* 设置背景图层和鼠标图层 */
 	sheet_updown(sht_back,  0);
-	sheet_updown(sht_win, 1);
-	sheet_updown(sht_mouse, 2);
+	sheet_updown(sht_win, 2);
+	sheet_updown(sht_mouse, 1);
 
 	/* 打印字符串变量值 */
 	sprintf(s, "(%d, %d)", mx, my);
