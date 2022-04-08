@@ -29,24 +29,30 @@ void init_screen(char *vram, int x, int y);
 #define COL8_008484		14
 #define COL8_848484		15
 
+struct BOOTINFO {
+	char cyls;
+	char leds;
+	char vmode;
+	char reserve;
+	short scrnx;
+	short scrny;
+	char *vram;
+};
+
 void HariMain(void)
 {
   char *vram;
 	int xsize, ysize;
-	short *binfo_scrnx;
-	short *binio_scrny;
-	int *binfo_vram;
+	struct BOOTINFO *binfo;
 
 	/* 设定调色板 */
   init_palette();
 
 	/* 获取显卡内存地址以及屏幕大小 */
-	binfo_scrnx = (short *) 0x0ff4;
-	binio_scrny = (short *) 0x0ff6;
-	binfo_vram = (int *) 0x0ff8;
-	xsize = *binfo_scrnx;
-	ysize = *binio_scrny;
-	vram = (char *) *binfo_vram;
+	binfo = (struct BOOTINFO *) 0x0ff0;
+	xsize = (*binfo).scrnx;
+	ysize = (*binfo).scrny;
+	vram = (*binfo).vram;
   
 	/* 初始化屏幕 */
   init_screen(vram, xsize, ysize);
