@@ -6,6 +6,8 @@ void make_window8(unsigned char *buf, int xsize, int ysize, char *title);
 void putfonts_asc_sht(struct SHEET *sht, int x, int y, int c, int b, char *s, int l);
 void make_textbox8(struct SHEET *sht, int x0, int y0, int sx, int sy, int c);
 
+void task_b_main(void);
+
 void HariMain(void)
 {
 	struct BOOTINFO *binfo = (struct BOOTINFO *) ADR_BOOTINFO;
@@ -39,7 +41,13 @@ void HariMain(void)
 		'2', '3', '0', '.'
 	};
 
-	int mx, my, i, count;
+	/* 多任务 */
+	struct TSS32 tss_a, tss_b;
+	int task_b_esp;
+	/* 段地址 */
+	struct SEGMENT_DESCRIPTOR *gdt = (struct SEGMENT_DESCRIPTOR *) ADR_GDT;
+
+	int mx, my, i;
 	int cursor_x, cursor_c;
 
 	/* 初始化段表和中断记录表 */
@@ -125,7 +133,7 @@ void HariMain(void)
 	sheet_updown(sht_mouse, 2);
 
 	/* 打印字符串变量值 */
-	sprintf(s, "(%d, %d)", mx, my);
+	sprintf(s, "(%3d, %3d)", mx, my);
 	putfonts_asc_sht(sht_back, 0, 0, COL8_FFFFFF, COL8_008484, s, 10);
 
 	/* 内存检查 */
@@ -133,12 +141,34 @@ void HariMain(void)
 			memtotal / (1024 * 1024), memman_total(memman) / 1024);
 	putfonts_asc_sht(sht_back, 0, 32, COL8_FFFFFF, COL8_008484, s, 40);
 
+	/*多任务测试 */
+	tss_a.ldtr = 0;
+	tss_a.iomap = 0x40000000;
+	tss_b.ldtr = 0;
+	tss_b.iomap = 0x40000000;
+	set_segmdesc(gdt + 3, 103, (int) &tss_a, AR_TSS32);
+	set_segmdesc(gdt + 4, 103, (int) &tss_b, AR_TSS32);
+	load_tr(3 * 8);
+	task_b_esp = memman_alloc_4k(memman, 64 * 1024) + 64 * 1024;
+	tss_b.eip = (int) &task_b_main;
+	tss_b.eflags = 0x00000202; /* IF = 1; */
+	tss_b.eax = 0;
+	tss_b.ecx = 0;
+	tss_b.edx = 0;
+	tss_b.ebx = 0;
+	tss_b.esp = task_b_esp;
+	tss_b.ebp = 0;
+	tss_b.esi = 0;
+	tss_b.edi = 0;
+	tss_b.es = 1 * 8;
+	tss_b.cs = 2 * 8;
+	tss_b.ss = 1 * 8;
+	tss_b.ds = 1 * 8;
+	tss_b.fs = 1 * 8;
+	tss_b.gs = 1 * 8;
 
   for (;;)
   {
-		/* 计数 */
-		count++;
-
 		io_cli();
 		if (fifo32_status(&fifo) == 0)
 		{
@@ -219,15 +249,12 @@ void HariMain(void)
 			{
 				/* 10秒定时器 */
 				putfonts_asc_sht(sht_back, 0, 64, COL8_FFFFFF, COL8_008484, "10[sec]", 7);
-				/* 打印计数 */
-				sprintf(s, "%010d", count);
-				putfonts_asc_sht(sht_win, 40, 28, COL8_000000, COL8_C6C6C6, s, 10);
+				taskswitch4();
 			}
 			else if (i == 3)
 			{
 				/* 3秒定时器 */
 				putfonts_asc_sht(sht_back, 0, 80, COL8_FFFFFF, COL8_008484, "3[sec]", 6);
-				count = 0; /* 开始计数 */
 			}
 			else if (i == 1)
 			{
@@ -334,4 +361,9 @@ void make_textbox8(struct SHEET *sht, int x0, int y0, int sx, int sy, int c)
 	boxfill8(sht->buf, sht->bxsize, COL8_C6C6C6, x1 + 1, y0 - 2, x1 + 1, y1 + 1);
 	boxfill8(sht->buf, sht->bxsize, c,           x0 - 1, y0 - 1, x1 + 0, y1 + 0);
 	return;
+}
+
+void task_b_main(void)
+{
+	for (;;) { io_hlt(); }
 }
