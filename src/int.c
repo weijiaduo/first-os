@@ -37,10 +37,15 @@ void inthandler21(int *esp)
   io_out8(PIC0_OCW2, 0x61); /* 通知PIC"IRQ-01已经受理完毕" */
   
   data = io_in8(PORT_KEYDAT); /* 获取键盘中断数据 */
-  if (keybuf.next < 32)
+  if (keybuf.len < 32)
   {
-    keybuf.data[keybuf.next] = data;
-    keybuf.next++;
+    keybuf.data[keybuf.next_w] = data;
+    keybuf.len++;
+    keybuf.next_w++;
+    if (keybuf.next_w == 32)
+    {
+      keybuf.next_w = 0;
+    }
   }
 
   return;
