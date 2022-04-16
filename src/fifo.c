@@ -38,7 +38,7 @@ int fifo32_put(struct FIFO32 *fifo, int data)
         if (fifo->task->flags != 2)
         {
             /* 任务处于休眠状态时才需要唤醒 */
-            task_run(fifo->task, 0);
+            task_run(fifo->task, -1, 0);
         }
     }
 
