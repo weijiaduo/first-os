@@ -296,4 +296,5 @@ void task_add(struct TASK *task);
 void task_remove(struct TASK *task);
 void task_idle(void);
 
+void console_task(struct SHEET *sht_cons);
 void task_b_main(struct SHEET *sht_back);
