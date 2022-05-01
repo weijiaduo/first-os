@@ -294,5 +294,6 @@ void task_switchsub(void);
 void task_sleep(struct TASK *task);
 void task_add(struct TASK *task);
 void task_remove(struct TASK *task);
+void task_idle(void);
 
 void task_b_main(struct SHEET *sht_back);
