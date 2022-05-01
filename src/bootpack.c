@@ -63,6 +63,7 @@ void HariMain(void)
 	int cursor_x, cursor_c;
 	int key_to = 0; /* 键盘字符输出的位置 */
 	int key_shift = 0; /* 未按下shift键为0，按下左shift键为1，按下右shift键为2，按下左右shift键为3 */
+	int key_leds = (binfo->leds >> 4) & 7; /* 键盘灯状态，第4位ScrollLock，第5位NumberLock，第6位CapsLock */
 
 	/* 初始化段表和中断记录表 */
 	init_gdtidt();
@@ -206,6 +207,17 @@ void HariMain(void)
 					s[0] = 0;
 				}
 
+				/* 字母大小写处理 */
+				if ('A' <= s[0] && s[0] <= 'Z')
+				{
+					if (((key_leds & 4) == 0 && key_shift == 0) ||
+						((key_leds & 4) != 0 && key_shift != 0))
+					{
+						/* 大小写转换 */
+						s[0] += 0x20;
+					}
+				}
+
 				if (s[0] != 0)
 				{
 					/* 一般字符 */
@@ -285,6 +297,22 @@ void HariMain(void)
 				if (i == 256 + 0xb6)
 				{
 					key_shift &= ~2;
+				}
+
+				/* CapsLock */
+				if (i == 256 + 0x3a)
+				{
+					key_leds ^= 4;
+				}
+				/* NumberLock */
+				if (i == 256 + 0x45)
+				{
+					key_leds ^= 2;
+				}
+				/* ScrollLock */
+				if (i == 256 + 0x46)
+				{
+					key_leds ^= 1;
 				}
 
 				/* 光标显示 */
