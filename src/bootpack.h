@@ -269,6 +269,7 @@ struct TASK
     int flags;    /* 活动标志，0未使用，1休眠，2运行 */
     int level;    /* 层级 */
     int priority; /* 优先级 */
+    struct FIFO32 fifo; /* 存放任务的管道 */
     struct TSS32 tss;
 };
 struct TASKLEVEL
