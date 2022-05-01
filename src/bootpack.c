@@ -64,6 +64,10 @@ void HariMain(void)
 	int key_to = 0; /* 键盘字符输出的位置 */
 	int key_shift = 0; /* 未按下shift键为0，按下左shift键为1，按下右shift键为2，按下左右shift键为3 */
 	int key_leds = (binfo->leds >> 4) & 7; /* 键盘灯状态，第4位ScrollLock，第5位NumberLock，第6位CapsLock */
+	int keycmd_wait = -1; /* 向键盘控制器发送数据的状态 */
+
+	struct FIFO32 keycmd;
+	int keycmd_buf[32];
 
 	/* 初始化段表和中断记录表 */
 	init_gdtidt();
@@ -83,6 +87,7 @@ void HariMain(void)
 
 	/* 初始化键盘输入和鼠标输入的缓冲区 */
 	fifo32_init(&fifo, 128, fifobuf, 0);
+	fifo32_init(&keycmd, 32, keycmd_buf, 0);
 
 	/* 初始化键盘控制电路 */
 	init_keyboard(&fifo, 256);
@@ -171,8 +176,19 @@ void HariMain(void)
 			memtotal / (1024 * 1024), memman_total(memman) / 1024);
 	putfonts_asc_sht(sht_back, 0, 32, COL8_FFFFFF, COL8_008484, s, 40);
 
+	/* 为避免和键盘当前状态冲突，在一开始先进行设置 */
+	fifo32_put(&keycmd, KEYCMD_LED);
+	fifo32_put(&keycmd, key_leds);
+
 	for (;;)
 	{
+		if (fifo32_status(&keycmd) > 0 && keycmd_wait < 0)
+		{
+			/* 如果存在向键盘控制器发送的数据，则发送它 */
+			keycmd_wait = fifo32_get(&keycmd);
+			wait_KBC_sendready();
+			io_out8(PORT_KEYDAT, keycmd_wait);
+		}
 		io_cli();
 		if (fifo32_status(&fifo) == 0)
 		{
@@ -303,16 +319,35 @@ void HariMain(void)
 				if (i == 256 + 0x3a)
 				{
 					key_leds ^= 4;
+					fifo32_put(&keycmd, KEYCMD_LED);
+					fifo32_put(&keycmd, key_leds);
 				}
 				/* NumberLock */
 				if (i == 256 + 0x45)
 				{
 					key_leds ^= 2;
+					fifo32_put(&keycmd, KEYCMD_LED);
+					fifo32_put(&keycmd, key_leds);
 				}
 				/* ScrollLock */
 				if (i == 256 + 0x46)
 				{
 					key_leds ^= 1;
+					fifo32_put(&keycmd, KEYCMD_LED);
+					fifo32_put(&keycmd, key_leds);
+				}
+
+				/* 键盘成功接收到数据 */
+				if (i == 256 + 0xfa)
+				{
+					keycmd_wait = -1;
+				}
+				/* 键盘没有成功接收到数据 */
+				if (i == 256 + 0xfe)
+				{
+					/* 重新发送数据 */
+					wait_KBC_sendready();
+					io_out8(PORT_KEYDAT, keycmd_wait);
 				}
 
 				/* 光标显示 */

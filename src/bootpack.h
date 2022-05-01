@@ -144,6 +144,7 @@ void inthandler27(int *esp);
 /** keyboard.c */
 #define PORT_KEYDAT 0x0060
 #define PORT_KEYCMD 0x0064
+#define KEYCMD_LED 0xed
 
 void inthandler21(int *esp);
 void wait_KBC_sendready(void);
