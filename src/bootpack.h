@@ -1,6 +1,7 @@
 /** asmhead.nas */
 #define ADR_BOOTINFO 0x00000ff0
-struct BOOTINFO
+#define ADR_DISKIMG  0x00100000 /* 镜像文件在内存的起始地址 */
+struct BOOTINFO /* 0x0ff0-0x0fff */
 {
     char cyls;  /* 启动区磁盘读到何处为止 */
     char leds;  /* 启动时键盘LED的状态 */
@@ -301,3 +302,13 @@ void task_idle(void);
 void console_task(struct SHEET *sht_cons, unsigned int memtotal);
 int cons_newline(int cursor_y, struct SHEET *sheet);
 void task_b_main(struct SHEET *sht_back);
+
+/* 文件描述信息 */
+struct FILEINFO
+{
+    unsigned char name[8], ext[3], type; /* 文件名，扩展名，文件类型 */
+    char reserve[10]; /* 保留 */
+    unsigned short time, date; /* 时间、日期 */
+    unsigned short clustno; /* 簇号、扇区 */
+    unsigned int size; /* 文件大小 */
+};

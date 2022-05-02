@@ -579,6 +579,7 @@ void console_task(struct SHEET *sheet, unsigned int memtotal)
 	int cursor_x = 16, cursor_y = 28, cursor_c = -1;
 	char s[30], cmdline[30];
 	struct MENMAN *menman = (struct MENMAN *) MEMMAN_ADDR;
+	struct FILEINFO *finfo = (struct FILEINFO *) (ADR_DISKIMG + 0x002600); /* 文件名的起始地址 */
 
 	fifo32_init(&task->fifo, 128, fifobuf, task);
 
@@ -687,6 +688,37 @@ void console_task(struct SHEET *sheet, unsigned int memtotal)
 						sheet_refresh(sheet, 8, 28, 8 + 240, 28 + 128);
 						/* 回到第一行 */
 						cursor_y = 28;
+					}
+					else if (strcmp(cmdline, "dir") == 0)
+					{
+						for (x = 0; x < 224; x++)
+						{
+							/* 文件名第一个字节为 0x00 时，表示这一段不包含任何文件名信息 */
+							if (finfo[x].name[0] == 0x00)
+							{
+								break;
+							}
+							/* 文件名第一个字节为 0xE5 时，表示文件已被删除 */
+							if (finfo[x].name[0] == 0xE5)
+							{
+								continue;
+							}
+							/* 文件类型判断 */
+							if ((finfo[x].type & 0x18) == 0)
+							{
+								sprintf(s, "filename.ext %7d", finfo[x].size);
+								for (y = 0; y < 8; y++)
+								{
+									s[y] = finfo[x].name[y];
+								}
+								s[9] = finfo[x].ext[0];
+								s[10] = finfo[x].ext[1];
+								s[11] = finfo[x].ext[2];
+								putfonts_asc_sht(sheet, 8, cursor_y, COL8_FFFFFF, COL8_000000, s, 30);
+								cursor_y = cons_newline(cursor_y, sheet);
+							}
+						}
+						cursor_y = cons_newline(cursor_y, sheet);
 					}
 					else
 					{
