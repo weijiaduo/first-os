@@ -286,13 +286,18 @@ void HariMain(void)
 						/* 不显示光标 */
 						cursor_c = -1;
 						boxfill8(sht_win->buf, sht_win->bxsize, COL8_FFFFFF, cursor_x, 28, cursor_x + 7, 43);
+						/* 命令行窗口光标 ON */
+						fifo32_put(&task_cons->fifo, 2);
 					}
 					else
 					{
 						key_to = 0;
 						make_wtitle8(buf_win, sht_win->bxsize, "task_a", 1);
 						make_wtitle8(buf_cons, sht_cons->bxsize, "console", 0);
-						cursor_c = COL8_000000; /* 显示光标 */
+						/* 显示光标 */
+						cursor_c = COL8_000000;
+						/* 命令行窗口光标 OFF */
+						fifo32_put(&task_cons->fifo, 3);
 					}
 					sheet_refresh(sht_win, 0, 0, sht_win->bxsize, 21);
 					sheet_refresh(sht_cons, 0, 0, sht_cons->bxsize, 21);
@@ -590,7 +595,7 @@ void console_task(struct SHEET *sheet)
 	int i;
 	int fifobuf[128];
 	int cursor_x = 16;
-	int cursor_c = COL8_000000;
+	int cursor_c = -1;
 	char s[2];
 
 	fifo32_init(&task->fifo, 128, fifobuf, task);
@@ -621,14 +626,32 @@ void console_task(struct SHEET *sheet)
 				if (i != 0)
 				{
 					timer_init(timer, &task->fifo, 0); /* 下次置0 */
-					cursor_c = COL8_FFFFFF;
+					if (cursor_c >= 0)
+					{
+						cursor_c = COL8_FFFFFF;
+					}
 				}
 				else
 				{
 					timer_init(timer, &task->fifo, 1); /* 下次置1 */
-					cursor_c = COL8_000000;
+					if (cursor_c >= 0)
+					{
+						cursor_c = COL8_000000;
+					}
 				}
 				timer_settime(timer, 50);
+			}
+
+			/* 光标 ON */
+			if (i == 2)
+			{
+				cursor_c = COL8_FFFFFF;
+			}
+			/* 光标 OFF */
+			if (i == 3)
+			{
+				boxfill8(sheet->buf, sheet->bxsize, COL8_000000, cursor_x, 28, cursor_x + 7, 43);
+				cursor_c = -1;
 			}
 
 			/* 键盘数据（通过任务A） */
@@ -659,7 +682,10 @@ void console_task(struct SHEET *sheet)
 			}
 
 			/* 重新显示光标 */
-			boxfill8(sheet->buf, sheet->bxsize, cursor_c, cursor_x, 28, cursor_x + 7, 43);
+			if (cursor_c >= 0)
+			{
+				boxfill8(sheet->buf, sheet->bxsize, cursor_c, cursor_x, 28, cursor_x + 7, 43);
+			}
 			sheet_refresh(sheet, cursor_x, 28, cursor_x + 8, 44);
 		}
 	}
