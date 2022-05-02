@@ -298,5 +298,6 @@ void task_add(struct TASK *task);
 void task_remove(struct TASK *task);
 void task_idle(void);
 
-void console_task(struct SHEET *sht_cons);
+void console_task(struct SHEET *sht_cons, unsigned int memtotal);
+int cons_newline(int cursor_y, struct SHEET *sheet);
 void task_b_main(struct SHEET *sht_back);
