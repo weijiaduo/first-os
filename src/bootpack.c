@@ -126,8 +126,8 @@ void HariMain(void)
 	sht_cons = sheet_alloc(shtctl);
 	buf_cons = (unsigned char *)memman_alloc_4k(memman, 256 * 165);
 	sheet_setbuf(sht_cons, buf_cons, 256, 165, -1); /* 无透明色 */
-	make_window8(buf_cons, 256, 165, "console", 0);
-	make_textbox8(sht_cons, 8, 28, 240, 128, COL8_000000);
+	make_window8(buf_cons, 256, 165, "console", 0); /* 窗口范围，包括标题栏 */
+	make_textbox8(sht_cons, 8, 28, 240, 128, COL8_000000); /* 输入窗口范围 */
 	task_cons = task_alloc();
 	task_cons->tss.esp = memman_alloc_4k(memman, 64 * 1024) + 64 * 1024 - 8;
 	task_cons->tss.eip = (int)&console_task;
@@ -603,6 +603,7 @@ void console_task(struct SHEET *sheet)
 	struct TASK *task = task_now();
 
 	int i;
+	int x, y;
 	int fifobuf[128];
 	int cursor_x = 16, cursor_y = 28, cursor_c = -1;
 	char s[2];
@@ -679,17 +680,42 @@ void console_task(struct SHEET *sheet)
 				else if (i == 10 + 256)
 				{
 					/* 回车键 */
+					/* 用空格将光标擦除 */
+					putfonts_asc_sht(sheet, cursor_x, cursor_y, COL8_FFFFFF, COL8_000000, " ", 1);
+
+					/* 回车换行 */
 					if (cursor_y < 28 + 112)
 					{
-						/* 用空格将光标擦除 */
-						putfonts_asc_sht(sheet, cursor_x, cursor_y, COL8_FFFFFF, COL8_000000, " ", 1);
-						/* 下移一行 */
+						/* 在范围内，下移一行 */
 						cursor_y += 16;
-						/* 显示提示符 */
-						putfonts_asc_sht(sheet, 8, cursor_y, COL8_FFFFFF, COL8_000000, ">", 1);
-						/* 提示符宽度 */
-						cursor_x = 16;
 					}
+					else
+					{
+						/* 超出范围，滚动换行 */
+						/* 整体上移一行，第一行会丢失 */
+						for (y = 28; y < 28 + 112; y++)
+						{
+							for (x = 8; x < 8 + 240; x++)
+							{
+								sheet->buf[x + y * sheet->bxsize] = sheet->buf[x + (y + 16) * sheet->bxsize];
+							}
+						}
+						/* 擦除最后一行，相当于新行 */
+						for (y = 28 + 112; y < 28 + 128; y++)
+						{
+							for (x = 8; x < 8 + 240; x++)
+							{
+								sheet->buf[x + y * sheet->bxsize] = COL8_000000;
+							}
+						}
+						/* 刷新图层 */
+						sheet_refresh(sheet, 8, 28, 2 + 240, 28 + 128);
+					}
+
+					/* 显示提示符 */
+					putfonts_asc_sht(sheet, 8, cursor_y, COL8_FFFFFF, COL8_000000, ">", 1);
+					/* 提示符宽度 */
+					cursor_x = 16;
 				}
 				else
 				{
