@@ -53,7 +53,7 @@ void HariMain(void)
 		0, 0, 0, '_', 0, 0, 0, 0, 0, 0, 0, 0, 0, '|', 0, 0};
 
 	/* 多任务 */
-	struct TASK *task_a, *task_cons, *task_b[3];
+	struct TASK *task_a, *task_cons;
 
 	int mx, my, i;
 	int cursor_x, cursor_c;
