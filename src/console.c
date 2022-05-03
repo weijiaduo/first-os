@@ -22,6 +22,7 @@ void console_task(struct SHEET *sheet, unsigned int memtotal)
 	char *p;
 	struct MENMAN *memman = (struct MENMAN *) MEMMAN_ADDR;
 	struct FILEINFO *finfo = (struct FILEINFO *) (ADR_DISKIMG + 0x002600); /* 文件名的起始地址 */
+	struct SEGMENT_DESCRIPTOR *gdt = (struct SEGMENT_DESCRIPTOR *) ADR_GDT;
 
 	/* 解压FAT文件分配表 */
 	int *fat = (int *) memman_alloc_4k(memman, 4 * 2880);
@@ -281,6 +282,62 @@ type_next_file:
 							cursor_y = cons_newline(cursor_y, sheet);
 						}
 						cursor_y = cons_newline(cursor_y, sheet);
+					}
+					else if (strcmp(cmdline, "hlt") == 0)
+					{
+						/* hlt应用程序 */
+						for (y = 0; y < 11; y++)
+						{
+							s[y] = ' ';
+						}
+						s[0] = 'H';
+						s[1] = 'L';
+						s[2] = 'T';
+						s[8] = 'H';
+						s[9] = 'R';
+						s[10] = 'B';
+						for (x = 0; x < 224;)
+						{
+							/* 文件名第一个字节为 0x00 时，表示这一段不包含任何文件名信息 */
+							if (finfo[x].name[0] == 0x00)
+							{
+								break;
+							}
+							/* 文件类型判断 */
+							if ((finfo[x].type & 0x18) == 0)
+							{
+								for (y = 0; y < 11; y++)
+								{
+									if (finfo[x].name[y] != s[y])
+									{
+										goto hlt_next_file;
+									}
+								}
+								/* 找到文件名 */
+								break;
+							}
+hlt_next_file:
+							x++;
+						}
+						if (x < 24 && finfo[x].name[0] != 0x00)
+						{
+							/* 找到文件的情况 */
+							p = (char *) memman_alloc_4k(memman, finfo[x].size);
+							/* 从磁盘加载文件内容到内存中 */
+							file_loadfile(finfo[x].clustno, finfo[x].size, p, fat, (char *) (ADR_DISKIMG + 0x003e00));
+							/* 为文件创建一个代码段 */
+							set_segmdesc(gdt + 1003, finfo[x].size - 1, (int) p, AR_CODE32_ER);
+							/* 跳到文件代码段里执行代码 */
+							farjmp(0, 1003 * 8);
+							/* 释放文件内容内存 */
+							memman_free_4k(memman, (int) p, finfo[x].size);
+						}
+						else
+						{
+							/* 没有找到文件的情况 */
+							putfonts_asc_sht(sheet, 8, cursor_y, COL8_FFFFFF, COL8_000000, "File not found.", 15);
+							cursor_y = cons_newline(cursor_y, sheet);
+						}
 					}
 					else
 					{
