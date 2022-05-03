@@ -32,6 +32,8 @@ void load_tr(int tr);
 
 /* 任务切换 */
 void farjmp(int eip, int cs);
+/* 调用程序 */
+void farcall(int eip, int cs);
 
 /* 中断处理函数 */
 void asm_inthandler20(void);

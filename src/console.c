@@ -480,7 +480,7 @@ void cmd_hlt(struct CONSOLE *cons, int *fat)
 		/* 为文件创建一个代码段 */
 		set_segmdesc(gdt + 1003, finfo->size - 1, (int) p, AR_CODE32_ER);
 		/* 跳到文件代码段里执行代码 */
-		farjmp(0, 1003 * 8);
+		farcall(0, 1003 * 8);
 		/* 释放缓冲区 */
 		memman_free_4k(memman, (int) p, finfo->size);
 	}

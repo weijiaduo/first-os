@@ -19,7 +19,7 @@
 		GLOBAL	_asm_inthandler20, _asm_inthandler21
 		GLOBAL	_asm_inthandler27, _asm_inthandler2c
 		GLOBAL	_memtest_sub
-		GLOBAL	_farjmp
+		GLOBAL	_farjmp, _farcall
 		GLOBAL  _asm_cons_putchar
 
 		EXTERN	_inthandler20, _inthandler21
@@ -227,3 +227,7 @@ _asm_cons_putchar:	; void asm_cons_putchar(void);
 		CALL    _cons_putchar
 		ADD     ESP,12                  ; 将栈中的数据丢弃
 		RETF
+
+_farcall:		; void farcall(int eip, int cs);
+		CALL	FAR	[ESP+4]				; eip, cs
+		RET
