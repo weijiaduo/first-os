@@ -721,7 +721,7 @@ void console_task(struct SHEET *sheet, unsigned int memtotal)
 						}
 						cursor_y = cons_newline(cursor_y, sheet);
 					}
-					else if (cmdline[0] == 't' & cmdline[1] == 'y' && cmdline[2] == 'p' && cmdline[3] == 'e' && cmdline[4] == ' ')
+					else if (strncmp(cmdline, "type ", 5) == 0)
 					{
 						/* type命令，输出文件内容 */
 						/* 解析出文件名 */
@@ -782,13 +782,48 @@ type_next_file:
 								/* 逐字输出 */
 								s[0] = p[x];
 								s[1] = 0;
-								putfonts_asc_sht(sheet, cursor_x, cursor_y, COL8_FFFFFF, COL8_000000, s, 1);
-								cursor_x += 8;
-								if (cursor_x == 8 + 240)
+								if (s[0] == 0x09)
 								{
-									/* 到达右端后换行 */
+									/* 制表符 */
+									for (;;)
+									{
+										putfonts_asc_sht(sheet, cursor_x, cursor_y, COL8_FFFFFF, COL8_000000, " ", 1);
+										cursor_x += 8;
+										if (cursor_x == 8 + 240)
+										{
+											/* 到达右端后换行 */
+											cursor_x = 8;
+											cursor_y = cons_newline(cursor_y, sheet);
+										}
+										if (((cursor_x - 8) & 0x1f) == 0)
+										{
+											/* 被32整除则break */
+											break;
+										}
+									}
+								}
+								else if (s[0] == 0x0a)
+								{
+									/* 换行 */
 									cursor_x = 8;
 									cursor_y = cons_newline(cursor_y, sheet);
+								}
+								else if (s[0] == 0x0d)
+								{
+									/* 回车 */
+									/* 暂时不做任何操作 */
+								}
+								else
+								{
+									/* 一般字符 */
+									putfonts_asc_sht(sheet, cursor_x, cursor_y, COL8_FFFFFF, COL8_000000, s, 1);
+									cursor_x += 8;
+									if (cursor_x == 8 + 240)
+									{
+										/* 到达右端后换行 */
+										cursor_x = 8;
+										cursor_y = cons_newline(cursor_y, sheet);
+									}
 								}
 							}
 						}
