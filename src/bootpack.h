@@ -312,3 +312,6 @@ struct FILEINFO
     unsigned short clustno; /* 簇号、扇区 */
     unsigned int size; /* 文件大小 */
 };
+
+void file_readfat(int *fat, unsigned char *img);
+void file_loadfile(int clustno, int size, char *buf, int *fat, char *img);
