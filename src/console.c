@@ -306,19 +306,18 @@ void cons_runcmd(char *cmdline, struct CONSOLE *cons, int *fat, unsigned int mem
 		/* type命令，输出文件内容 */
 		cmd_type(cons, fat, cmdline);
 	}
-	else if (strcmp(cmdline, "hlt") == 0)
-	{
-		/* hlt 应用程序 */
-		cmd_hlt(cons, fat);
-	}
 	else if (cmdline[0] != 0)
 	{
-		/* 不是命令，也不是空行 */
-		putfonts_asc_sht(cons->sht, 8, cons->cur_y, COL8_FFFFFF, COL8_000000, "Bad command.", 12);
+		/* 应用程序执行 */
+		if (cmd_app(cons, fat, cmdline) == 0)
+		{
+			/* 不是命令，也不是空行 */
+			putfonts_asc_sht(cons->sht, 8, cons->cur_y, COL8_FFFFFF, COL8_000000, "Bad command.", 12);
 
-		/* 换2行空行 */
-		cons_newline(cons);
-		cons_newline(cons);
+			/* 换2行空行 */
+			cons_newline(cons);
+			cons_newline(cons);
+		}
 	}
 	return;
 }
@@ -455,21 +454,48 @@ void cmd_type(struct CONSOLE *cons, int *fat, char *cmdline)
 }
 
 /**
- * @brief hlt应用程序
+ * @brief 运行应用程序
  * 
  * @param cons 命令行结构体
  * @param fat 解压后的FAT记录
+ * @param cmdline 命令行字符串
+ * @return int 
  */
-void cmd_hlt(struct CONSOLE *cons, int *fat)
+int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline)
 {
-	struct SHEET *sheet = cons->sht;
 	struct MENMAN *memman = (struct MENMAN *) MEMMAN_ADDR;
 	struct SEGMENT_DESCRIPTOR *gdt = (struct SEGMENT_DESCRIPTOR *) ADR_GDT;
 	struct FILEINFO *finfo;
-	char *p;
 
-	/* 搜索指定的文件 */
-	finfo = file_search("HLT.HRB", (struct FILEINFO *) (ADR_DISKIMG + 0x002600), 224);
+	char name[18];
+	char *p;
+	int i;
+
+	/* 根据命令行生成文件名 */
+	for (i = 0; i < 13; i++)
+	{
+		if (cmdline[i] <= ' ')
+		{
+			break;
+		}
+		name[i] = cmdline[i];
+	}
+	name[i] = 0; /* 将文件名后面置为0 */
+
+
+	finfo = file_search(name, (struct FILEINFO *) (ADR_DISKIMG + 0x002600), 224);
+	if (finfo == 0 && name[i - 1] != '.')
+	{
+		/* 没有找到文件，在后面加上扩展名.hrb再次寻找 */
+		name[i] = '.';
+		name[i + 1] = 'H';
+		name[i + 2] = 'R';
+		name[i + 3] = 'B';
+
+		name[i + 4] = 0;
+		finfo = file_search(name, (struct FILEINFO *) (ADR_DISKIMG + 0x002600), 224);
+	}
+
 	if (finfo != 0)
 	{
 		/* 找到文件的情况 */
@@ -483,14 +509,11 @@ void cmd_hlt(struct CONSOLE *cons, int *fat)
 		farcall(0, 1003 * 8);
 		/* 释放缓冲区 */
 		memman_free_4k(memman, (int) p, finfo->size);
-	}
-	else
-	{
-		/* 没有找到文件的情况 */
-		putfonts_asc_sht(sheet, 8, cons->cur_y, COL8_FFFFFF, COL8_000000, "File not found.", 15);
+
 		cons_newline(cons);
+		return 1;
 	}
 
-	cons_newline(cons);
-	return;
+	/* 没找到文件的情况 */
+	return 0;
 }
