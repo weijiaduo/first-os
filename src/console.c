@@ -277,6 +277,38 @@ void cons_putchar(struct CONSOLE *cons, int chr, char move)
 }
 
 /**
+ * @brief 显示字符串，直到遇到编码0为止
+ * 
+ * @param cons 命令行结构
+ * @param s 字符串
+ */
+void cons_putstr0(struct CONSOLE *cons, char *s)
+{
+	for (; *s != 0; s++)
+	{
+		cons_putchar(cons, *s, 1);
+	}
+	return;
+}
+
+/**
+ * @brief 显示字符串，指定字符串长度
+ * 
+ * @param cons 命令行结构
+ * @param s 字符串
+ * @param l 长度
+ */
+void cons_putstr1(struct CONSOLE *cons, char *s, int l)
+{
+	int i;
+	for (i = 0; i < l; i++)
+	{
+		cons_putchar(cons, s[i], 1);
+	}
+	return;
+}
+
+/**
  * @brief 执行命令
  * 
  * @param cmdline 命令行字符串
@@ -312,11 +344,7 @@ void cons_runcmd(char *cmdline, struct CONSOLE *cons, int *fat, unsigned int mem
 		if (cmd_app(cons, fat, cmdline) == 0)
 		{
 			/* 不是命令，也不是空行 */
-			putfonts_asc_sht(cons->sht, 8, cons->cur_y, COL8_FFFFFF, COL8_000000, "Bad command.", 12);
-
-			/* 换2行空行 */
-			cons_newline(cons);
-			cons_newline(cons);
+			cons_putstr0(cons, "Bad command.\n\n");
 		}
 	}
 	return;
@@ -331,17 +359,9 @@ void cons_runcmd(char *cmdline, struct CONSOLE *cons, int *fat, unsigned int mem
 void cmd_mem(struct CONSOLE *cons, unsigned int memtotal)
 {
 	struct MENMAN *memman = (struct MENMAN *) MEMMAN_ADDR;
-	char s[30];
-
-	sprintf(s, "total %dMB", memtotal / (1024 * 1024));
-	putfonts_asc_sht(cons->sht, 8, cons->cur_y, COL8_FFFFFF, COL8_000000, s, 30);
-	cons_newline(cons);
-	sprintf(s, "free %dKB", memman_total(memman) / 1024);
-	putfonts_asc_sht(cons->sht, 8, cons->cur_y, COL8_FFFFFF, COL8_000000, s, 30);
-
-	/* 换2行空行 */
-	cons_newline(cons);
-	cons_newline(cons);
+	char s[60];
+	sprintf(s, "total %dMB\nfree %dKB\n\n", memtotal / (1024 * 1024), memman_total(memman) / 1024);
+	cons_putstr0(cons, s);
 }
 
 /**
@@ -379,32 +399,31 @@ void cmd_dir(struct CONSOLE *cons)
 	struct FILEINFO *finfo = (struct FILEINFO *) (ADR_DISKIMG + 0x002600); /* 文件名的起始地址 */
 
 	char s[30];
-	int x, y;
-	for (x = 0; x < 224; x++)
+	int i, j;
+	for (i = 0; i < 224; i++)
 	{
 		/* 文件名第一个字节为 0x00 时，表示这一段不包含任何文件名信息 */
-		if (finfo[x].name[0] == 0x00)
+		if (finfo[i].name[0] == 0x00)
 		{
 			break;
 		}
 		/* 文件名第一个字节为 0xE5 时，表示文件已被删除 */
-		if (finfo[x].name[0] == 0xE5)
+		if (finfo[i].name[0] == 0xE5)
 		{
 			continue;
 		}
 		/* 文件类型判断 */
-		if ((finfo[x].type & 0x18) == 0)
+		if ((finfo[i].type & 0x18) == 0)
 		{
-			sprintf(s, "filename.ext %7d", finfo[x].size);
-			for (y = 0; y < 8; y++)
+			sprintf(s, "filename.ext %7d\n", finfo[i].size);
+			for (j = 0; j < 8; j++)
 			{
-				s[y] = finfo[x].name[y];
+				s[j] = finfo[i].name[j];
 			}
-			s[9] = finfo[x].ext[0];
-			s[10] = finfo[x].ext[1];
-			s[11] = finfo[x].ext[2];
-			putfonts_asc_sht(sheet, 8, cons->cur_y, COL8_FFFFFF, COL8_000000, s, 30);
-			cons_newline(cons);
+			s[9] = finfo[i].ext[0];
+			s[10] = finfo[i].ext[1];
+			s[11] = finfo[i].ext[2];
+			cons_putstr0(cons, s);
 		}
 	}
 	cons_newline(cons);
@@ -435,18 +454,15 @@ void cmd_type(struct CONSOLE *cons, int *fat, char *cmdline)
 		p = (char *) memman_alloc_4k(memman, finfo->size);
 		/* 加载文件内容到缓冲区 */
 		file_loadfile(finfo->clustno, finfo->size, p, fat, (char *) (ADR_DISKIMG + 0x003e00));
-		for (i = 0; i < finfo->size; i++)
-		{
-			cons_putchar(cons, p[i], 1);
-		}
+		/* 打印缓冲区内容 */
+		cons_putstr1(cons, p, finfo->size);
 		/* 释放缓冲区 */
 		memman_free_4k(memman, (int) p, finfo->size);
 	}
 	else
 	{
 		/* 没有找到文件的情况 */
-		putfonts_asc_sht(sheet, 8, cons->cur_y, COL8_FFFFFF, COL8_000000, "File not found.", 15);
-		cons_newline(cons);
+		cons_putstr0(cons, "File not found.\n");
 	}
 
 	cons_newline(cons);
@@ -516,4 +532,30 @@ int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline)
 
 	/* 没找到文件的情况 */
 	return 0;
+}
+
+
+/**
+ * @brief 应用程序功能调用接口
+ * 
+ */
+void hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int eax)
+{
+	struct CONSOLE *cons = (struct CONSOLE *) *((int *) 0x0fec);
+	if (edx == 1)
+	{
+		/* 输出单个字符 */
+		cons_putchar(cons, eax & 0xff, 1);
+	}
+	else if (edx == 2)
+	{
+		/* 输出字符串 */
+		cons_putstr0(cons, (char *) ebx);
+	}
+	else if (edx == 3)
+	{
+		/* 输出字符串 */
+		cons_putstr1(cons, (char *) ebx, ecx);
+	}
+	return;
 }
