@@ -578,6 +578,7 @@ void console_task(struct SHEET *sheet, unsigned int memtotal)
 	int fifobuf[128];
 	int cursor_x = 16, cursor_y = 28, cursor_c = -1;
 	char s[30], cmdline[30];
+	char *p;
 	struct MENMAN *menman = (struct MENMAN *) MEMMAN_ADDR;
 	struct FILEINFO *finfo = (struct FILEINFO *) (ADR_DISKIMG + 0x002600); /* 文件名的起始地址 */
 
@@ -717,6 +718,85 @@ void console_task(struct SHEET *sheet, unsigned int memtotal)
 								putfonts_asc_sht(sheet, 8, cursor_y, COL8_FFFFFF, COL8_000000, s, 30);
 								cursor_y = cons_newline(cursor_y, sheet);
 							}
+						}
+						cursor_y = cons_newline(cursor_y, sheet);
+					}
+					else if (cmdline[0] == 't' & cmdline[1] == 'y' && cmdline[2] == 'p' && cmdline[3] == 'e' && cmdline[4] == ' ')
+					{
+						/* type命令，输出文件内容 */
+						/* 解析出文件名 */
+						for (y = 0; y < 11; y++)
+						{
+							s[y] = ' ';
+						}
+						y = 0;
+						for (x = 5; y < 11 && cmdline[x] != 0; x++)
+						{
+							if (cmdline[x] == '.' && y <= 8)
+							{
+								y = 8;
+							}
+							else
+							{
+								s[y] = cmdline[x];
+								if ('a' <= s[y] && s[y] <= 'z')
+								{
+									/* 将小写字母转换成大写字母 */
+									s[y] -= 0x20;
+								}
+								y++;
+							}
+						}
+						/* 找到文件 */
+						for (x = 0; x < 224;)
+						{
+							/* 文件名第一个字节为 0x00 时，表示这一段不包含任何文件名信息 */
+							if (finfo[x].name[0] == 0x00)
+							{
+								break;
+							}
+							/* 文件类型判断 */
+							if ((finfo[x].type & 0x18) == 0)
+							{
+								for (y = 0; y < 11; y++)
+								{
+									if (finfo[x].name[y] != s[y])
+									{
+										goto type_next_file;
+									}
+								}
+								/* 找到文件名 */
+								break;
+							}
+type_next_file:
+							x++;
+						}
+						if (x < 24 && finfo[x].name[0] != 0x00)
+						{
+							/* 找到文件的情况 */
+							y = finfo[x].size;
+							p = (char *) (finfo[x].clustno * 512 + 0x003e00 + ADR_DISKIMG);
+							cursor_x = 8;
+							for (x = 0; x < y; x++)
+							{
+								/* 逐字输出 */
+								s[0] = p[x];
+								s[1] = 0;
+								putfonts_asc_sht(sheet, cursor_x, cursor_y, COL8_FFFFFF, COL8_000000, s, 1);
+								cursor_x += 8;
+								if (cursor_x == 8 + 240)
+								{
+									/* 到达右端后换行 */
+									cursor_x = 8;
+									cursor_y = cons_newline(cursor_y, sheet);
+								}
+							}
+						}
+						else
+						{
+							/* 没有找到文件的情况 */
+							putfonts_asc_sht(sheet, 8, cursor_y, COL8_FFFFFF, COL8_000000, "File not found.", 15);
+							cursor_y = cons_newline(cursor_y, sheet);
 						}
 						cursor_y = cons_newline(cursor_y, sheet);
 					}
