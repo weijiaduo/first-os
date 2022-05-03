@@ -220,13 +220,14 @@ _farjmp:		; void farjmp(int eip, int cs);
 		RET
 
 _asm_cons_putchar:	; void asm_cons_putchar(void);
+		STI								; 允许中断，因为只是用中断替代CALL，而中断处理会关闭中断，不应该关闭中断
 		PUSH	1
 		AND	    EAX,0xff			    ; 将AH和EAX的高位置为0，将EAX置为已存入字符编码的状态
 		PUSH    EAX
 		PUSH    DWORD [0x0fec]          ; 读取内存并PUSH该值
 		CALL    _cons_putchar
 		ADD     ESP,12                  ; 将栈中的数据丢弃
-		RETF
+		IRETD
 
 _farcall:		; void farcall(int eip, int cs);
 		CALL	FAR	[ESP+4]				; eip, cs
