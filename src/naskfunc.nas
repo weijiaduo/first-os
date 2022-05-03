@@ -221,12 +221,14 @@ _farjmp:		; void farjmp(int eip, int cs);
 
 _asm_cons_putchar:	; void asm_cons_putchar(void);
 		STI								; 允许中断，因为只是用中断替代CALL，而中断处理会关闭中断，不应该关闭中断
+		PUSHAD							; _cons_putchar 可能修改了寄存器ECX的值，所以使用PUSHAD和POPAD还原状态
 		PUSH	1
 		AND	    EAX,0xff			    ; 将AH和EAX的高位置为0，将EAX置为已存入字符编码的状态
 		PUSH    EAX
 		PUSH    DWORD [0x0fec]          ; 读取内存并PUSH该值
 		CALL    _cons_putchar
 		ADD     ESP,12                  ; 将栈中的数据丢弃
+		POPAD							; _cons_putchar 可能修改了寄存器ECX的值，所以使用PUSHAD和POPAD还原状态
 		IRETD
 
 _farcall:		; void farcall(int eip, int cs);
