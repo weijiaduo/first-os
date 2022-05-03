@@ -300,8 +300,22 @@ void task_remove(struct TASK *task);
 void task_idle(void);
 
 /* console.c */
+struct CONSOLE
+{
+    struct SHEET *sht; /* 命令行图层 */
+    int cur_x, cur_y; /* 光标坐标 */
+    int cur_c; /* 光标颜色 */
+};
 void console_task(struct SHEET *sht_cons, unsigned int memtotal);
-int cons_newline(int cursor_y, struct SHEET *sheet);
+void cons_cursor(struct CONSOLE *cons, struct TIMER *timer, int i);
+void cons_newline(struct CONSOLE *cons);
+void cons_putchar(struct CONSOLE *cons, int chr, char move);
+void cons_runcmd(char *cmdline, struct CONSOLE *cons, int *fat, unsigned int memtotal);
+void cmd_mem(struct CONSOLE *cons, unsigned int memtotal);
+void cmd_cls(struct CONSOLE *cons);
+void cmd_dir(struct CONSOLE *cons);
+void cmd_type(struct CONSOLE *cons, int *fat, char *cmdline);
+void cmd_hlt(struct CONSOLE *cons, int *fat);
 
 /* file.c */
 /* 文件描述信息 */
@@ -316,6 +330,7 @@ struct FILEINFO
 
 void file_readfat(int *fat, unsigned char *img);
 void file_loadfile(int clustno, int size, char *buf, int *fat, char *img);
+struct FILEINFO *file_search(char *name, struct FILEINFO *finfo, int max);
 
 /* window.c */
 void make_window8(unsigned char *buf, int xsize, int ysize, char *title, char act);
