@@ -484,7 +484,7 @@ int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline)
 	struct FILEINFO *finfo;
 
 	char name[18];
-	char *p;
+	char *p, *q;
 	int i;
 
 	/* 根据命令行生成文件名 */
@@ -515,14 +515,18 @@ int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline)
 	if (finfo != 0)
 	{
 		/* 找到文件的情况 */
-		/* 创建缓冲区 */
+		/* 分配代码段缓冲区 */
 		p = (char *) memman_alloc_4k(memman, finfo->size);
+		/* 分配数据段缓冲区 */
+		q = (char *) memman_alloc_4k(memman, 64 * 1024);
 		/* 在内存中保存缓冲区的地址 */
 		*((int *) 0xfe8) = (int) p;
 		/* 加载文件内容到缓冲区 */
 		file_loadfile(finfo->clustno, finfo->size, p, fat, (char *) (ADR_DISKIMG + 0x003e00));
 		/* 为文件创建一个代码段 */
 		set_segmdesc(gdt + 1003, finfo->size - 1, (int) p, AR_CODE32_ER);
+		/* 为文件创建一个数据段 */
+		set_segmdesc(gdt + 1004, 64 * 1024 - 1, (int) q, AR_DATA32_RW);
 		/* 临时方案，识别 Hari 作为应用程序执行入口 */
 		if (finfo->size >= 8 && strncmp(p + 4, "Hari", 4) == 0)
 		{
@@ -533,10 +537,13 @@ int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline)
 			p[4] = 0x00;
 			p[5] = 0xcb;
 		}
-		/* 跳到文件代码段里执行代码 */
-		farcall(0, 1003 * 8);
+
+		/* 运行应用程序的代码段 */
+		start_app(0, 1003 * 8, 64 * 1024, 1004 * 8);
+
 		/* 释放缓冲区 */
 		memman_free_4k(memman, (int) p, finfo->size);
+		memman_free_4k(memman, (int) q, 64 * 1024);
 
 		cons_newline(cons);
 		return 1;

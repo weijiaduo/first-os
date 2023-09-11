@@ -44,6 +44,9 @@ void asm_inthandler2c(void);
 /* 应用程序接口 */
 void asm_hrb_api(void);
 
+/* 调用应用程序 */
+void start_app(int eip, int cs, int esp, int ds);
+
 /** fifo.c */
 struct FIFO32
 {
