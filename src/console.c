@@ -556,7 +556,6 @@ int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline)
 
 /**
  * @brief 应用程序功能调用接口
- * 
  */
 void hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int eax)
 {
@@ -579,4 +578,14 @@ void hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
 		cons_putstr1(cons, (char *) ebx + cs_base, ecx);
 	}
 	return;
+}
+
+/**
+ * @brief 异常中断处理函数
+ */
+int inthandler0d(int *esp)
+{
+	struct CONSOLE *cons = (struct CONSOLE *) *((int *) 0x0fec);
+	cons_putstr0(cons, "\nINT 0D :\n General Protected Exception.\n");
+	return 1; /* 强制结束程序 */
 }

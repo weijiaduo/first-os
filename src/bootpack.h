@@ -36,6 +36,7 @@ void farjmp(int eip, int cs);
 void farcall(int eip, int cs);
 
 /* 中断处理函数 */
+void asm_inthandler0d(void);
 void asm_inthandler20(void);
 void asm_inthandler21(void);
 void asm_inthandler27(void);
@@ -327,6 +328,7 @@ void cmd_dir(struct CONSOLE *cons);
 void cmd_type(struct CONSOLE *cons, int *fat, char *cmdline);
 int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline);
 void hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int eax);
+int inthandler0d(int *esp);
 
 /* file.c */
 /* 文件描述信息 */
