@@ -517,6 +517,8 @@ int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline)
 		/* 找到文件的情况 */
 		/* 创建缓冲区 */
 		p = (char *) memman_alloc_4k(memman, finfo->size);
+		/* 在内存中保存缓冲区的地址 */
+		*((int *) 0xfe8) = (int) p;
 		/* 加载文件内容到缓冲区 */
 		file_loadfile(finfo->clustno, finfo->size, p, fat, (char *) (ADR_DISKIMG + 0x003e00));
 		/* 为文件创建一个代码段 */
@@ -541,6 +543,8 @@ int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline)
  */
 void hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int eax)
 {
+	/* 代码段基址 */
+	int cs_base = *((int *) 0xfe8);
 	struct CONSOLE *cons = (struct CONSOLE *) *((int *) 0x0fec);
 	if (edx == 1)
 	{
@@ -550,12 +554,12 @@ void hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
 	else if (edx == 2)
 	{
 		/* 输出字符串 */
-		cons_putstr0(cons, (char *) ebx);
+		cons_putstr0(cons, (char *) ebx + cs_base);
 	}
 	else if (edx == 3)
 	{
 		/* 输出字符串 */
-		cons_putstr1(cons, (char *) ebx, ecx);
+		cons_putstr1(cons, (char *) ebx + cs_base, ecx);
 	}
 	return;
 }

@@ -9,10 +9,10 @@
 
 [FILE "naskfunc.nas"]   ; 源文件名
 
-    GLOBAL	_io_hlt, _io_cli, _io_sti, _io_stihlt
-    GLOBAL	_io_in8,  _io_in16,  _io_in32
-    GLOBAL	_io_out8, _io_out16, _io_out32
-    GLOBAL	_io_load_eflags, _io_store_eflags
+		GLOBAL	_io_hlt, _io_cli, _io_sti, _io_stihlt
+		GLOBAL	_io_in8,  _io_in16,  _io_in32
+		GLOBAL	_io_out8, _io_out16, _io_out32
+		GLOBAL	_io_load_eflags, _io_store_eflags
 		GLOBAL	_load_gdtr, _load_idtr
 		GLOBAL	_load_cr0, _store_cr0
 		GLOBAL	_load_tr

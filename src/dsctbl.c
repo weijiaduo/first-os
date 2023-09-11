@@ -34,7 +34,14 @@ void init_gdtidt(void)
     return;
 }
 
-/* 设置段描述信息 */
+/**
+ * @brief 设置段描述信息
+ * 
+ * @param sd 段号
+ * @param limit 段大小
+ * @param base 段基址
+ * @param ar 段属性
+ */
 void set_segmdesc(struct SEGMENT_DESCRIPTOR *sd, unsigned int limit, int base, int ar)
 {
     if (limit > 0xfffff)
@@ -52,6 +59,14 @@ void set_segmdesc(struct SEGMENT_DESCRIPTOR *sd, unsigned int limit, int base, i
     return;
 }
 
+/**
+ * @brief 设置中断处理信息
+ * 
+ * @param gd 中断处理信息
+ * @param offset 中断处理函数地址
+ * @param selector 段号
+ * @param ar 中断属性
+ */
 void set_gatedesc(struct GATE_DESCRIPTOR *gd, int offset, int selector, int ar)
 {
     gd->offset_low = offset & 0xffff;
