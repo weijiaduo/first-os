@@ -41,10 +41,12 @@ hankaku.obj : hankaku.bin Makefile
 bootpack.bim : $(OBJS_BOOTPACK) Makefile
 	$(OBJ2BIM) @$(RULEFILE) out:bootpack.bim stack:3136k map:bootpack.map \
 		$(OBJS_BOOTPACK)
-# 3MB+64KB=3136KB
 
 bootpack.hrb : bootpack.bim Makefile
 	$(BIM2HRB) bootpack.bim bootpack.hrb 0
+
+haribote.sys : asmhead.bin bootpack.hrb Makefile
+	copy /B asmhead.bin+bootpack.hrb haribote.sys
 
 a.bim : a.obj a_nask.obj Makefile
 	$(OBJ2BIM) @$(RULEFILE) out:a.bim map:a.map a.obj a_nask.obj
@@ -64,10 +66,14 @@ hello.hrb : hello.nas Makefile
 hello2.hrb : hello2.nas Makefile
 	$(NASK) hello2.nas hello2.hrb hello2.lst
 
-haribote.sys : asmhead.bin bootpack.hrb Makefile
-	copy /B asmhead.bin+bootpack.hrb haribote.sys
+crack1.bim : crack1.obj Makefile
+	$(OBJ2BIM) @$(RULEFILE) out:crack1.bim map:crack1.map crack1.obj
 
-haribote.img : ipl10.bin haribote.sys hello.hrb hello2.hrb a.hrb hello3.hrb Makefile
+crack1.hrb : crack1.bim Makefile
+	$(BIM2HRB) crack1.bim crack1.hrb 0
+
+haribote.img : ipl10.bin haribote.sys Makefile \
+	hello.hrb hello2.hrb a.hrb hello3.hrb crack1.hrb
 	$(EDIMG)   imgin:../z_tools/fdimg0at.tek \
 	  wbinimg src:ipl10.bin len:512 from:0 to:0 \
 		copy from:haribote.sys to:@: \
@@ -77,6 +83,7 @@ haribote.img : ipl10.bin haribote.sys hello.hrb hello2.hrb a.hrb hello3.hrb Make
 		copy from:hello2.hrb to:@: \
 		copy from:a.hrb to:@: \
 		copy from:hello3.hrb to:@: \
+		copy from:crack1.hrb to:@: \
 		imgout:haribote.img
 
 # 统一
