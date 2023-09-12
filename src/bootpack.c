@@ -30,6 +30,7 @@ void HariMain(void)
 	/* 命令行窗口 */
 	struct SHEET *sht_cons;
 	unsigned char *buf_cons;
+	struct CONSOLE *cons;
 
 	/* 没按下 Shift 键时 */
 	static char keytable0[0x80] = {
@@ -338,6 +339,16 @@ void HariMain(void)
 					key_leds ^= 1;
 					fifo32_put(&keycmd, KEYCMD_LED);
 					fifo32_put(&keycmd, key_leds);
+				}
+				/* Shift+F1，强制结束应用程序 */
+				if (i == 256 + 0x3b && key_shift != 0 && task_cons->tss.ss0 != 0)
+				{
+					cons = (struct CONSOLE *) *((int *) 0x0fec);
+					cons_putstr0(cons, "\nBreak(key):\n");
+					io_cli(); /* 不能在改变寄存器值时切换到其他任务 */
+					task_cons->tss.eax = (int) &(task_cons->tss.esp0);
+					task_cons->tss.eip = (int) asm_end_app;
+					io_sti();
 				}
 
 				/* 键盘成功接收到数据 */

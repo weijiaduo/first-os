@@ -43,6 +43,9 @@ void asm_inthandler21(void);
 void asm_inthandler27(void);
 void asm_inthandler2c(void);
 
+/* 结束应用程序 */
+void asm_end_app(void);
+
 /* 应用程序接口 */
 void asm_hrb_api(void);
 
