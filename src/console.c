@@ -486,6 +486,7 @@ int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline)
 	char name[18];
 	char *p, *q;
 	int i;
+	int segsize, esp, datsiz, dathrb;
 	struct TASK *task = task_now();
 
 	/* 根据命令行生成文件名 */
@@ -518,31 +519,50 @@ int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline)
 		/* 找到文件的情况 */
 		/* 分配代码段缓冲区 */
 		p = (char *) memman_alloc_4k(memman, finfo->size);
-		/* 分配数据段缓冲区 */
-		q = (char *) memman_alloc_4k(memman, 64 * 1024);
-		/* 在内存中保存缓冲区的地址 */
-		*((int *) 0xfe8) = (int) p;
 		/* 加载文件内容到缓冲区 */
 		file_loadfile(finfo->clustno, finfo->size, p, fat, (char *) (ADR_DISKIMG + 0x003e00));
 		
-		/* 创建一个代码段，加上 0x60 表示是应用程序段 */
-		set_segmdesc(gdt + 1003, finfo->size - 1, (int) p, AR_CODE32_ER + 0x60);
-		/* 创建一个数据段，加上 0x60 表示是应用程序段 */
-		set_segmdesc(gdt + 1004, 64 * 1024 - 1, (int) q, AR_DATA32_RW + 0x60);
-		
-		/* 识别 Hari 文件标记，跳到应用程序入口（HariMain）执行 */
-		if (finfo->size >= 8 && strncmp(p + 4, "Hari", 4) == 0)
+		/* 识别 Hari 文件标记，判断是否是可执行的应用程序文件 */
+		if (finfo->size >= 8 && strncmp(p + 4, "Hari", 4) == 0 && *p == 0x00)
 		{
-			start_app(0x1b, 1003 * 8, 64 * 1024, 1004 * 8, &(task->tss.esp0));
+			/* 应用程序请求的数据段大小 */
+			segsize = *((int *) (p + 0x0000));
+			/* ESP初始值&数据部分传送的目标地址 */
+			esp = *((int *) (p + 0x000c));
+			/* 数据部分的大小 */
+			datsiz = *((int *) (p + 0x0010));
+			/* 数据部分的起始地址 */
+			dathrb = *((int *) (p + 0x0014));
+
+			/* 分配数据段缓冲区 */
+			q = (char *) memman_alloc_4k(memman, segsize);
+			/* 在内存中保存缓冲区的地址 */
+			*((int *) 0xfe8) = (int) q;
+
+			/* 创建一个代码段，加上 0x60 表示是应用程序段 */
+			set_segmdesc(gdt + 1003, finfo->size - 1, (int) p, AR_CODE32_ER + 0x60);
+			/* 创建一个数据段，加上 0x60 表示是应用程序段 */
+			set_segmdesc(gdt + 1004, 64 * 1024 - 1, (int) q, AR_DATA32_RW + 0x60);
+
+			/* 复制 .hrb 的数据部分到数据段中 */
+			for (i = 0; i < datsiz; i++)
+			{
+				q[esp + i] = p[dathrb + i];
+			}
+
+			/* 0x1b 是 HariMain 函数的地址，即程序执行入口 */
+			start_app(0x1b, 1003 * 8, esp, 1004 * 8, &(task->tss.esp0));
+
+			/* 释放缓冲区 */
+			memman_free_4k(memman, (int) q, segsize);
 		}
 		else
 		{
-			start_app(0, 1003 * 8, 64 * 1024, 1004 * 8, &(task->tss.esp0));
+			cons_putstr0(cons, ".hrb file format error.\n");
 		}
 
 		/* 释放缓冲区 */
 		memman_free_4k(memman, (int) p, finfo->size);
-		memman_free_4k(memman, (int) q, 64 * 1024);
 
 		cons_newline(cons);
 		return 1;
