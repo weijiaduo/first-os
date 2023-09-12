@@ -587,12 +587,29 @@ int *hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
 }
 
 /**
- * @brief 异常中断处理函数
+ * @brief 栈异常中断处理函数
+ */
+int *inthandler0c(int *esp)
+{
+	struct TASK *task = task_now();
+	struct CONSOLE *cons = (struct CONSOLE *) *((int *) 0x0fec);
+	char s[30];
+	cons_putstr0(cons, "\nINT 0D :\n Stack Exception.\n");
+	sprintf(s, "EIP = %08X\n", esp[11]);
+	cons_putstr0(cons, s);
+	return &(task->tss.esp0); /* 强制结束程序 */
+}
+
+/**
+ * @brief 一般保护异常中断处理函数
  */
 int *inthandler0d(int *esp)
 {
 	struct TASK *task = task_now();
 	struct CONSOLE *cons = (struct CONSOLE *) *((int *) 0x0fec);
+	char s[30];
 	cons_putstr0(cons, "\nINT 0D :\n General Protected Exception.\n");
+	sprintf(s, "EIP = %08X\n", esp[11]);
+	cons_putstr0(cons, s);
 	return &(task->tss.esp0); /* 强制结束程序 */
 }
