@@ -524,23 +524,21 @@ int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline)
 		*((int *) 0xfe8) = (int) p;
 		/* 加载文件内容到缓冲区 */
 		file_loadfile(finfo->clustno, finfo->size, p, fat, (char *) (ADR_DISKIMG + 0x003e00));
+		
 		/* 创建一个代码段，加上 0x60 表示是应用程序段 */
 		set_segmdesc(gdt + 1003, finfo->size - 1, (int) p, AR_CODE32_ER + 0x60);
 		/* 创建一个数据段，加上 0x60 表示是应用程序段 */
 		set_segmdesc(gdt + 1004, 64 * 1024 - 1, (int) q, AR_DATA32_RW + 0x60);
-		/* 临时方案，识别 Hari 作为应用程序执行入口 */
+		
+		/* 识别 Hari 文件标记，跳到应用程序入口（HariMain）执行 */
 		if (finfo->size >= 8 && strncmp(p + 4, "Hari", 4) == 0)
 		{
-			p[0] = 0xe8;
-			p[1] = 0x16;
-			p[2] = 0x00;
-			p[3] = 0x00;
-			p[4] = 0x00;
-			p[5] = 0xcb;
+			start_app(0x1b, 1003 * 8, 64 * 1024, 1004 * 8, &(task->tss.esp0));
 		}
-
-		/* 运行应用程序的代码段 */
-		start_app(0, 1003 * 8, 64 * 1024, 1004 * 8, &(task->tss.esp0));
+		else
+		{
+			start_app(0, 1003 * 8, 64 * 1024, 1004 * 8, &(task->tss.esp0));
+		}
 
 		/* 释放缓冲区 */
 		memman_free_4k(memman, (int) p, finfo->size);

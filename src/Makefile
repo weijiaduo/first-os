@@ -60,6 +60,12 @@ hello3.bim : hello3.obj a_nask.obj Makefile
 hello3.hrb : hello3.bim Makefile
 	$(BIM2HRB) hello3.bim hello3.hrb 0
 
+hello4.bim : hello4.obj a_nask.obj Makefile
+	$(OBJ2BIM) @$(RULEFILE) out:hello4.bim map:hello4.map hello4.obj a_nask.obj
+
+hello4.hrb : hello4.bim Makefile
+	$(BIM2HRB) hello4.bim hello4.hrb 0
+
 hello.hrb : hello.nas Makefile
 	$(NASK) hello.nas hello.hrb hello.lst
 
@@ -106,7 +112,7 @@ bug3.hrb : bug3.bim Makefile
 	$(BIM2HRB) bug3.bim bug3.hrb 0
 
 haribote.img : ipl10.bin haribote.sys Makefile \
-	hello.hrb hello2.hrb a.hrb hello3.hrb \
+	hello.hrb hello2.hrb a.hrb hello3.hrb hello4.hrb \
 	crack1.hrb crack2.hrb crack3.hrb crack4.hrb crack5.hrb crack6.hrb \
 	bug1.hrb bug2.hrb bug3.hrb
 	$(EDIMG)   imgin:../z_tools/fdimg0at.tek \
@@ -118,6 +124,7 @@ haribote.img : ipl10.bin haribote.sys Makefile \
 		copy from:hello2.hrb to:@: \
 		copy from:a.hrb to:@: \
 		copy from:hello3.hrb to:@: \
+		copy from:hello4.hrb to:@: \
 		copy from:crack1.hrb to:@: \
 		copy from:crack2.hrb to:@: \
 		copy from:crack3.hrb to:@: \
