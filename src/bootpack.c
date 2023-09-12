@@ -112,6 +112,8 @@ void HariMain(void)
 
 	/* 初始化图层 */
 	shtctl = shtctl_init(memman, binfo->vram, binfo->scrnx, binfo->scrny);
+	/* 保存起来，提供给应用程序用 */
+	*((int *) 0x0fe4) = (int) shtctl;
 
 	/* 背景图层 */
 	sht_back = sheet_alloc(shtctl);

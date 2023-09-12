@@ -578,9 +578,16 @@ int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline)
 int *hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int eax)
 {
 	/* 代码段基址 */
-	int cs_base = *((int *) 0xfe8);
+	int ds_base = *((int *) 0xfe8);
 	struct TASK *task = task_now();
 	struct CONSOLE *cons = (struct CONSOLE *) *((int *) 0x0fec);
+	struct SHTCTL *shtctl = (struct SHTCTL *) *((int *) 0x0fe4);
+	struct SHEET *sht;
+	int *reg = &eax + 1;
+	/* 强行改写通过 PUSHAD 保存的值 */
+	/* reg[0] : EDI,   reg[1] : ESI,   reg[2] : EBP,   reg[3] : ESP */
+	/* reg[4] : EBX,   reg[5] : EDX,   reg[6] : ECX,   reg[7] : EAX */
+
 	if (edx == 1)
 	{
 		/* 输出单个字符 */
@@ -589,17 +596,27 @@ int *hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
 	else if (edx == 2)
 	{
 		/* 输出字符串 */
-		cons_putstr0(cons, (char *) ebx + cs_base);
+		cons_putstr0(cons, (char *) ebx + ds_base);
 	}
 	else if (edx == 3)
 	{
 		/* 输出字符串 */
-		cons_putstr1(cons, (char *) ebx + cs_base, ecx);
+		cons_putstr1(cons, (char *) ebx + ds_base, ecx);
 	}
 	else if (edx == 4)
 	{
 		/* 结束应用程序 */
 		return &(task->tss.esp0);
+	}
+	else if (edx == 5)
+	{
+		/* 应用程序弹窗 */
+		sht = sheet_alloc(shtctl);
+		sheet_setbuf(sht, (char *) ebx + ds_base, esi, edi, eax);
+		make_window8((char *) ebx + ds_base, esi, edi, (char *) ecx + ds_base, 0);
+		sheet_slide(sht, 100, 50);
+		sheet_updown(sht, 3); /* 背景层高度设置在 task_a 之上 */
+		reg[7] = (int) sht;
 	}
 	return 0;
 }
