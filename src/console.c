@@ -541,9 +541,9 @@ int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline)
 			task->ds_base = (int) q;
 
 			/* 创建一个代码段，加上 0x60 表示是应用程序段 */
-			set_segmdesc(gdt + 1003, finfo->size - 1, (int) p, AR_CODE32_ER + 0x60);
+			set_segmdesc(gdt + task->sel / 8 + 1000, finfo->size - 1, (int) p, AR_CODE32_ER + 0x60);
 			/* 创建一个数据段，加上 0x60 表示是应用程序段 */
-			set_segmdesc(gdt + 1004, 64 * 1024 - 1, (int) q, AR_DATA32_RW + 0x60);
+			set_segmdesc(gdt + task->sel / 8 + 2000, segsize - 1, (int) q, AR_DATA32_RW + 0x60);
 
 			/* 复制 .hrb 的数据部分到数据段中 */
 			for (i = 0; i < datsiz; i++)
@@ -552,7 +552,7 @@ int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline)
 			}
 
 			/* 0x1b 是 HariMain 函数的地址，即程序执行入口 */
-			start_app(0x1b, 1003 * 8, esp, 1004 * 8, &(task->tss.esp0));
+			start_app(0x1b, task->sel + 1000 * 8, esp, task->sel + 2000 * 8, &(task->tss.esp0));
 
 			/* 应用程序结束后，关闭遗留的窗口 */
 			shtctl = (struct SHTCTL *) *((int *) 0x0fe4);
