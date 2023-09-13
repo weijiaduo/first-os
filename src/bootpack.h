@@ -318,6 +318,7 @@ struct CONSOLE
     struct SHEET *sht; /* 命令行图层 */
     int cur_x, cur_y; /* 光标坐标 */
     int cur_c; /* 光标颜色 */
+    struct TIMER *timer; /* 定时器 */
 };
 void console_task(struct SHEET *sht_cons, unsigned int memtotal);
 void cons_cursor(struct CONSOLE *cons, struct TIMER *timer, int i);

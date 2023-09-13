@@ -30,24 +30,24 @@ void console_task(struct SHEET *sheet, unsigned int memtotal)
 	cons.cur_c = -1;
 	*((int *) 0x0fec) = (int) &cons;
 
-	/* 命令行输入 */
-	char cmdline[30];
-
-	/* 定时器 */
-	struct TIMER *timer;
+	/* 命令行窗口任务 */
 	struct TASK *task = task_now();
 
-	int i;
+	/* 窗口FIFO缓冲区 */
 	int fifobuf[128];
 	fifo32_init(&task->fifo, 128, fifobuf, task);
 
-	timer = timer_alloc();
-	timer_init(timer, &task->fifo, 1);
-	timer_settime(timer, 50);
+	/* 定时器 */
+	cons.timer = timer_alloc();
+	timer_init(cons.timer, &task->fifo, 1);
+	timer_settime(cons.timer, 50);
 
 	/* 显式提示符 */
 	cons_putchar(&cons, '>', 1);
 
+	/* 命令行输入 */
+	char cmdline[30];
+	int i;
 	for(;;)
 	{
 		io_cli();
@@ -107,7 +107,7 @@ void console_task(struct SHEET *sheet, unsigned int memtotal)
 			/* 光标数据 */
 			if (i <= 3)
 			{
-				cons_cursor(&cons, timer, i);
+				cons_cursor(&cons, cons.timer, i);
 			}
 			
 			/* 刷新光标 */
@@ -578,6 +578,7 @@ int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline)
 int *hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int eax)
 {
 	/* 代码段基址 */
+	int i;
 	int ds_base = *((int *) 0xfe8);
 	struct TASK *task = task_now();
 	struct CONSOLE *cons = (struct CONSOLE *) *((int *) 0x0fec);
@@ -687,6 +688,58 @@ int *hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
 	{
 		/* 关闭窗口 */
 		sheet_free((struct SHEET *) ebx);
+	}
+	else if (edx == 15)
+	{
+		/* 按回车键关闭窗口 */
+		for (;;)
+		{
+			io_cli();
+
+			/* FIFO 为空 */
+			if (fifo32_status(&task->fifo) == 0)
+			{
+				if (eax != 0)
+				{
+					/* eax=1时，休眠等待 */
+					task_sleep(task);
+				}
+				else
+				{
+					/* eax=0时，返回-1 */
+					io_sti();
+					reg[7] = -1;
+					return 0;
+				}
+			}
+
+			/* FIFO 不为空 */
+			i = fifo32_get(&task->fifo);
+			io_sti();
+			if (i <= 1)
+			{
+				/* 光标用定时器 */
+				/* 应用程序运行时不需要显示关标，因此总是将下次显示用的值设为1 */
+				timer_init(cons->timer, &task->fifo, 1); /* 下次置为1 */
+				timer_settime(cons->timer, 50);
+			}
+			else if (i == 2)
+			{
+				/* 光标ON */
+				cons->cur_c = COL8_FFFFFF;
+			}
+			else if (i == 3)
+			{
+				/* 光标OFF */
+				cons->cur_c = -1;
+			}
+			else if (256 <= i && i <= 511)
+			{
+				/* 键盘数据（通过任务A） */
+				reg[7] = i - 256;
+				return 0;
+			}
+		}
 	}
 	return 0;
 }
