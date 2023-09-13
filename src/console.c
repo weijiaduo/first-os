@@ -632,6 +632,25 @@ int *hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
 		boxfill8(sht->buf, sht->bxsize, ebp, eax, ecx, esi, edi);
 		sheet_refresh(sht, eax, ecx, esi + 1, edi + 1);
 	}
+	else if (edx == 8)
+	{
+		/* 内存初始化 */
+		memman_init((struct MEMMAN *) (ebx + ds_base));
+		ecx &= 0xfffffff0; /* 以16字节为单位 */
+		memman_free((struct MEMMAN *) (ebx + ds_base), eax, ecx);
+	}
+	else if (edx == 9)
+	{
+		/* 内存分配 */
+		ecx = (ecx + 0x0f) & 0xfffffff0; /* 以16字节为单位进位取整 */
+		reg[7] = memman_alloc((struct MEMMAN *) (ebx + ds_base), ecx);
+	}
+	else if (edx == 10)
+	{
+		/* 内存释放 */
+		ecx = (ecx + 0x0f) & 0xfffffff0; /* 以16字节为单位进位取整 */
+		memman_free((struct MEMMAN *) (ebx + ds_base), eax, ecx);
+	}
 	return 0;
 }
 

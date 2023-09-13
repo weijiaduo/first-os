@@ -6,22 +6,23 @@
         GLOBAL  _api_end
         GLOBAL  _api_putchar, _api_putstr0
         GLOBAL  _api_openwin
-        GLOBAL	_api_putstrwin
-        GLOBAL	_api_boxfilwin
+        GLOBAL  _api_putstrwin
+        GLOBAL  _api_boxfilwin
+        GLOBAL  _api_initmalloc, _api_malloc, _api_free
     
 [SECTION .text]
 
-_api_end:       ; void api_end(void);
+_api_end:               ; void api_end(void);
         MOV     EDX,4
         INT     0x40
 
-_api_putchar:   ; void api_putchar(int c);
+_api_putchar:           ; void api_putchar(int c);
         MOV     EDX, 1
         MOV     AL, [ESP+4]     ; c
         INT     0x40
         RET
 
-_api_putstr0:   ; void api_putstr0(char *s);
+_api_putstr0:           ; void api_putstr0(char *s);
         PUSH    EBX
         MOV     EDX, 2
         MOV     EBX, [ESP+8]     ; s
@@ -29,7 +30,7 @@ _api_putstr0:   ; void api_putstr0(char *s);
         POP     EBX
         RET
 
-_api_openwin:   ; int api_openwin(char *buf, int xsize, int ysize, int col_inv, char*title);
+_api_openwin:           ; int api_openwin(char *buf, int xsize, int ysize, int col_inv, char*title);
         PUSH    EDI
         PUSH    ESI
         PUSH    EBX
@@ -45,7 +46,7 @@ _api_openwin:   ; int api_openwin(char *buf, int xsize, int ysize, int col_inv, 
         POP     EDI
         RET
 
-_api_putstrwin:	; void api_putstrwin(int win, int x, int y, int col, int len, char *str);
+_api_putstrwin:	        ; void api_putstrwin(int win, int x, int y, int col, int len, char *str);
         PUSH	EDI
         PUSH	ESI
         PUSH	EBP
@@ -64,7 +65,7 @@ _api_putstrwin:	; void api_putstrwin(int win, int x, int y, int col, int len, ch
         POP	EDI
         RET
 
-_api_boxfilwin:	; void api_boxfilwin(int win, int x0, int y0, int x1, int y1, int col);
+_api_boxfilwin:	        ; void api_boxfilwin(int win, int x0, int y0, int x1, int y1, int col);
         PUSH	EDI
         PUSH	ESI
         PUSH	EBP
@@ -81,4 +82,35 @@ _api_boxfilwin:	; void api_boxfilwin(int win, int x0, int y0, int x1, int y1, in
         POP	EBP
         POP	ESI
         POP	EDI
+        RET
+
+_api_initmalloc:        ; void api_initmalloc(void);
+        PUSH    EBX
+        MOV     EDX,8
+        MOV     EBX,[CS:0x0020] ; malloc内存空间的地址
+        MOV     EAX,EBX
+        ADD     EAX,32*1024     ; 加上32KB
+        MOV     ECX,[CS:0x0000] ; 数据段的大小
+        SUB     ECX,EAX
+        INT     0x40
+        POP     EBX
+        RET
+
+_api_malloc:            ; char *api_malloc(int size);
+        PUSH    EBX
+        MOV     EDX,9
+        MOV     EBX,[CS:0x0020]
+        MOV     ECX,[ESP+8]     ; size
+        INT     0x40
+        POP     EBX
+        RET
+
+_api_free:              ; void api_free(char *addr, int size);
+        PUSH    EBX
+        MOV     EDX,10
+        MOV     EBX,[CS:0x0020]
+        MOV     EAX,[ESP+8]     ; addr
+        MOV     ECX,[ESP+12]    ; size
+        INT     0x40
+        POP     EBX
         RET
