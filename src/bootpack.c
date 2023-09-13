@@ -31,6 +31,7 @@ void HariMain(void)
 	struct SHEET *sht_cons;
 	unsigned char *buf_cons;
 	struct CONSOLE *cons;
+	struct SHEET *sht;
 
 	/* 没按下 Shift 键时 */
 	static char keytable0[0x80] = {
@@ -57,6 +58,7 @@ void HariMain(void)
 	struct TASK *task_a, *task_cons;
 
 	int mx, my, i;
+	int j, x, y;
 	int cursor_x, cursor_c;
 	int key_to = 0; /* 键盘字符输出的位置 */
 	int key_shift = 0; /* 未按下shift键为0，按下左shift键为1，按下右shift键为2，按下左右shift键为3 */
@@ -408,8 +410,22 @@ void HariMain(void)
 					sheet_slide(sht_mouse, mx, my);
 					if ((mdec.btn & 0x01) != 0)
 					{
-						/* 按下左键，移动win窗口 */
-						sheet_slide(sht_win, mx - 80, my - 8);
+						/* 按下左键 */
+						/* 按照从上到下的顺序寻找鼠标所指向的图层 */
+						for (j = shtctl->top - 1; j > 0; j--)
+						{
+							sht = shtctl->sheets[j];
+							x = mx - sht->vx0;
+							y = my - sht->vy0;
+							if (0 <= x && x < sht->bxsize && 0 <= y && y < sht->bysize)
+							{
+								if (sht->buf[y * sht->bxsize + x] != sht->col_inv)
+								{
+									sheet_updown(sht, shtctl->top - 1);
+									break;
+								}
+							}
+						}
 					}
 				}
 			}
