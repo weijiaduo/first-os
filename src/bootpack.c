@@ -31,7 +31,7 @@ void HariMain(void)
 	struct SHEET *sht_cons;
 	unsigned char *buf_cons;
 	struct CONSOLE *cons;
-	struct SHEET *sht;
+	struct SHEET *sht = 0;
 
 	/* 没按下 Shift 键时 */
 	static char keytable0[0x80] = {
@@ -58,7 +58,7 @@ void HariMain(void)
 	struct TASK *task_a, *task_cons;
 
 	int mx, my, i;
-	int j, x, y;
+	int j, x, y, mmx = -1, mmy = -1;
 	int cursor_x, cursor_c;
 	int key_to = 0; /* 键盘字符输出的位置 */
 	int key_shift = 0; /* 未按下shift键为0，按下左shift键为1，按下右shift键为2，按下左右shift键为3 */
@@ -411,21 +411,46 @@ void HariMain(void)
 					if ((mdec.btn & 0x01) != 0)
 					{
 						/* 按下左键 */
-						/* 按照从上到下的顺序寻找鼠标所指向的图层 */
-						for (j = shtctl->top - 1; j > 0; j--)
+						if (mmx < 0)
 						{
-							sht = shtctl->sheets[j];
-							x = mx - sht->vx0;
-							y = my - sht->vy0;
-							if (0 <= x && x < sht->bxsize && 0 <= y && y < sht->bysize)
+							/* 如果处于通常模式 */
+							/* 按照从上到下的顺序寻找鼠标所指向的图层 */
+							for (j = shtctl->top - 1; j > 0; j--)
 							{
-								if (sht->buf[y * sht->bxsize + x] != sht->col_inv)
+								sht = shtctl->sheets[j];
+								x = mx - sht->vx0;
+								y = my - sht->vy0;
+								if (0 <= x && x < sht->bxsize && 0 <= y && y < sht->bysize)
 								{
-									sheet_updown(sht, shtctl->top - 1);
-									break;
+									if (sht->buf[y * sht->bxsize + x] != sht->col_inv)
+									{
+										sheet_updown(sht, shtctl->top - 1);
+										/* 如果点击的是窗口标题栏区域，则进入窗口移动模式 */
+										if (3 <= x && x < sht->bxsize - 3 && 3 <= y && y < 21)
+										{
+											mmx = mx;
+											mmy = my;
+										}
+										break;
+									}
 								}
 							}
 						}
+						else
+						{
+							/* 如果处于窗口移动模式 */
+							x = mx - mmx;
+							y = my - mmy;
+							sheet_slide(sht, sht->vx0 + x, sht->vy0 + y);
+							mmx = mx;
+							mmy = my;
+						}
+					}
+					else
+					{
+						/* 没有按下左键，返回通常模式 */
+						mmx = -1;
+						mmy = -1;
 					}
 				}
 			}
