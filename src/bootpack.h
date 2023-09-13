@@ -290,6 +290,8 @@ struct TASK
     int priority; /* 优先级 */
     struct FIFO32 fifo; /* 存放任务的管道 */
     struct TSS32 tss;
+    struct CONSOLE *cons; /* 命令行 */
+    int ds_base; /* 数据段基址 */
 };
 struct TASKLEVEL
 {

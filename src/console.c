@@ -28,10 +28,10 @@ void console_task(struct SHEET *sheet, unsigned int memtotal)
 	cons.cur_x = 8;
 	cons.cur_y = 28;
 	cons.cur_c = -1;
-	*((int *) 0x0fec) = (int) &cons;
 
 	/* 命令行窗口任务 */
 	struct TASK *task = task_now();
+	task->cons = &cons;
 
 	/* 窗口FIFO缓冲区 */
 	int fifobuf[128];
@@ -538,8 +538,7 @@ int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline)
 
 			/* 分配数据段缓冲区 */
 			q = (char *) memman_alloc_4k(memman, segsize);
-			/* 在内存中保存缓冲区的地址 */
-			*((int *) 0xfe8) = (int) q;
+			task->ds_base = (int) q;
 
 			/* 创建一个代码段，加上 0x60 表示是应用程序段 */
 			set_segmdesc(gdt + 1003, finfo->size - 1, (int) p, AR_CODE32_ER + 0x60);
@@ -595,9 +594,9 @@ int *hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
 {
 	/* 代码段基址 */
 	int i;
-	int ds_base = *((int *) 0xfe8);
 	struct TASK *task = task_now();
-	struct CONSOLE *cons = (struct CONSOLE *) *((int *) 0x0fec);
+	int ds_base = task->ds_base;
+	struct CONSOLE *cons = task->cons;
 	struct SHTCTL *shtctl = (struct SHTCTL *) *((int *) 0x0fe4);
 	struct SHEET *sht;
 	int *reg = &eax + 1;
@@ -851,7 +850,7 @@ void hrb_api_linewin(struct SHEET *sht, int x0, int y0, int x1, int y1, int col)
 int *inthandler0c(int *esp)
 {
 	struct TASK *task = task_now();
-	struct CONSOLE *cons = (struct CONSOLE *) *((int *) 0x0fec);
+	struct CONSOLE *cons = task->cons;
 	char s[30];
 	cons_putstr0(cons, "\nINT 0D :\n Stack Exception.\n");
 	sprintf(s, "EIP = %08X\n", esp[11]);
@@ -865,7 +864,7 @@ int *inthandler0c(int *esp)
 int *inthandler0d(int *esp)
 {
 	struct TASK *task = task_now();
-	struct CONSOLE *cons = (struct CONSOLE *) *((int *) 0x0fec);
+	struct CONSOLE *cons = task->cons;
 	char s[30];
 	cons_putstr0(cons, "\nINT 0D :\n General Protected Exception.\n");
 	sprintf(s, "EIP = %08X\n", esp[11]);
