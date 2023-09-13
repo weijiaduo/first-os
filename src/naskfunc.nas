@@ -267,7 +267,6 @@ _farcall:		; void farcall(int eip, int cs);
 		CALL	FAR	[ESP+4]				; eip, cs
 		RET
 
-
 _asm_hrb_api:	; void asm_hrb_api(void);
 		STI
 		PUSH	DS
