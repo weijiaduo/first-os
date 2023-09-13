@@ -5,10 +5,12 @@
 
         GLOBAL  _api_end
         GLOBAL  _api_putchar, _api_putstr0
-        GLOBAL  _api_openwin, _api_refreshwin
+        GLOBAL  _api_openwin
         GLOBAL  _api_putstrwin
         GLOBAL  _api_boxfilwin
         GLOBAL  _api_point
+        GLOBAL  _api_refreshwin
+        GLOBAL  _api_linewin
         GLOBAL  _api_initmalloc, _api_malloc, _api_free
     
 [SECTION .text]
@@ -41,22 +43,6 @@ _api_openwin:           ; int api_openwin(char *buf, int xsize, int ysize, int c
         MOV     EDI,[ESP+24]    ; ysize
         MOV     EAX,[ESP+28]    ; col_inv
         MOV     ECX,[ESP+32]    ; title
-        INT     0x40
-        POP     EBX
-        POP     ESI
-        POP     EDI
-        RET
-
-_api_refreshwin:        ; void api_refreshwin(int win, int x0, int y0, int x1, int y1);
-        PUSH    EDI
-        PUSH    ESI
-        PUSH    EBX
-        MOV     EDX,12
-        MOV     EBX,[ESP+16]    ; win
-        MOV     EAX,[ESP+20]    ; x0
-        MOV     ECX,[ESP+24]    ; y0
-        MOV     ESI,[ESP+28]    ; x1
-        MOV     EDI,[ESP+32]    ; y1
         INT     0x40
         POP     EBX
         POP     ESI
@@ -112,6 +98,41 @@ _api_point:             ; void api_point(int win, int x, int y, int col);
         MOV     EAX,[ESP+28]    ; col
         INT     0x40
         POP     EBX
+        POP     ESI
+        POP     EDI
+        RET
+
+_api_refreshwin:        ; void api_refreshwin(int win, int x0, int y0, int x1, int y1);
+        PUSH    EDI
+        PUSH    ESI
+        PUSH    EBX
+        MOV     EDX,12
+        MOV     EBX,[ESP+16]    ; win
+        MOV     EAX,[ESP+20]    ; x0
+        MOV     ECX,[ESP+24]    ; y0
+        MOV     ESI,[ESP+28]    ; x1
+        MOV     EDI,[ESP+32]    ; y1
+        INT     0x40
+        POP     EBX
+        POP     ESI
+        POP     EDI
+        RET
+
+_api_linewin:           ; void api_linewin(int win, int x0, int y0, int x1, int y1, int col);
+        PUSH    EDI
+        PUSH    ESI
+        PUSH    EBP
+        PUSH    EBX
+        MOV     EDX,13
+        MOV     EBX,[ESP+20]    ; win
+        MOV     EAX,[ESP+24]    ; x0
+        MOV     ECX,[ESP+28]    ; y0
+        MOV     ESI,[ESP+32]    ; x1
+        MOV     EDI,[ESP+36]    ; y1
+        MOV     EBP,[ESP+40]    ; col
+        INT     0x40
+        POP     EBX
+        POP     EBP
         POP     ESI
         POP     EDI
         RET

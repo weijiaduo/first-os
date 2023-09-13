@@ -610,7 +610,7 @@ int *hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
 	}
 	else if (edx == 5)
 	{
-		/* 应用程序弹窗 */
+		/* 新窗口 */
 		sht = sheet_alloc(shtctl);
 		sheet_setbuf(sht, (char *) ebx + ds_base, esi, edi, eax);
 		make_window8((char *) ebx + ds_base, esi, edi, (char *) ecx + ds_base, 0);
@@ -620,7 +620,7 @@ int *hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
 	}
 	else if (edx == 6)
 	{
-		/* 在窗口上显示字符 */
+		/* 显示字符 */
 		sht = (struct SHEET *) (ebx & 0xfffffffe);
 		putfonts8_asc(sht->buf, sht->bxsize, esi, edi, eax, (char *) ebp + ds_base);
 		if ((ebx & 1) == 0)
@@ -630,7 +630,7 @@ int *hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
 	}
 	else if (edx == 7)
 	{
-		/* 在窗口上描绘方块 */
+		/* 画方块 */
 		sht = (struct SHEET *) (ebx & 0xfffffffe);
 		boxfill8(sht->buf, sht->bxsize, ebp, eax, ecx, esi, edi);
 		if ((ebx & 1) == 0)
@@ -659,7 +659,7 @@ int *hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
 	}
 	else if (edx == 11)
 	{
-		/* 在窗口上画点 */
+		/* 画点 */
 		sht = (struct SHEET *) (ebx & 0xfffffffe);
 		sht->buf[sht->bxsize * edi + esi] = eax;
 		if ((ebx & 1) == 0)
@@ -673,7 +673,56 @@ int *hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
 		sht = (struct SHEET *) ebx;
 		sheet_refresh(sht, eax, ecx, esi, edi);
 	}
+	else if (edx == 13)
+	{
+		/* 画直线 */
+		sht = (struct SHEET *) (ebx & 0xfffffffe);
+		hrb_api_linewin(sht, eax, ecx, esi, edi, ebp);
+		if ((ebx & 1) == 0)
+		{
+			sheet_refresh(sht, eax, ecx, esi + 1, edi + 1);
+		}
+	}
 	return 0;
+}
+
+/**
+ * @brief 画线
+ * 
+ * @param sht 图层
+ * @param x0 起始坐标 (x0, y0)
+ * @param y0 起始坐标 (x0, y0)
+ * @param x1 终点坐标 (x1, y1)
+ * @param y1 终点坐标 (x1, y1)
+ * @param col 颜色
+ */
+void hrb_api_linewin(struct SHEET *sht, int x0, int y0, int x1, int y1, int col)
+{
+	int i, x, y, len, dx, dy;
+	x = x0 << 10;
+	y = y0 << 10;
+	dx = x1 >= x0 ? x1 - x0 : x0 - x1;
+	dy = y1 >= y0 ? y1 - y0 : y0 - y1;
+	if (dx >= dy)
+	{
+		len = dx + 1;
+		dx = x0 > x1 ? -1024 : 1024;
+		dy = ((y0 <= y1 ? y1 - y0 + 1 : y1 - y0 - 1) << 10) / len;
+	}
+	else 
+	{
+		len = dy + 1;
+		dy = y0 > y1 ? -1024 : 1024;
+		dx = ((x0 <= x1 ? x1 - x0 + 1 : x1 - x0 - 1) << 10) / len;
+	}
+
+	for (i = 0; i < len; i++)
+	{
+		sht->buf[(y >> 10) * sht->bxsize + (x >> 10)] = col;
+		x += dx;
+		y += dy;
+	}
+	return;
 }
 
 /**
