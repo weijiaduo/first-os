@@ -566,6 +566,8 @@ int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline)
 					sheet_free(sht);
 				}
 			}
+			/* 应用程序结束后，关闭遗留的定时器 */
+			timer_cancelall(&task->fifo);
 
 			/* 释放缓冲区 */
 			memman_free_4k(memman, (int) q, segsize);
@@ -762,6 +764,7 @@ int *hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
 	{
 		/* 获取定时器 */
 		reg[7] = (int) timer_alloc();
+		((struct TIMER *) reg[7])->flags2 = 1; /* 允许自动取消 */
 	}
 	else if (edx == 17)
 	{
