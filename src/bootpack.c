@@ -352,6 +352,12 @@ void HariMain(void)
 					task_cons->tss.eip = (int) asm_end_app;
 					io_sti();
 				}
+				/* F11 */
+				if (i == 256 + 0x57 && shtctl->top > 2)
+				{
+					/* 把最下面的窗口移到最上面（其中，0图层是背景，top层是鼠标） */
+					sheet_updown(shtctl->sheets[1], shtctl->top - 1);
+				}
 
 				/* 键盘成功接收到数据 */
 				if (i == 256 + 0xfa)
