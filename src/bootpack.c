@@ -24,6 +24,7 @@ void HariMain(void)
 	struct TASK *task_cons[2];
 	struct SHEET *sht_cons[2];
 	unsigned char *buf_cons[2];
+	int *cons_fifo[2];
 
 	/* 任务A */
 	struct TASK *task_a, *task;
@@ -117,6 +118,13 @@ void HariMain(void)
 	sheet_setbuf(sht_back, buf_back, binfo->scrnx, binfo->scrny, -1);
 	init_screen8(buf_back, binfo->scrnx, binfo->scrny);
 
+	/* 鼠标图层 */
+	sht_mouse = sheet_alloc(shtctl);
+	sheet_setbuf(sht_mouse, buf_mouse, 16, 16, 99);
+	init_mouse_cursor8(buf_mouse, 99);
+	mx = (binfo->scrnx - 16) / 2;
+	my = (binfo->scrny - 28 - 16) / 2;
+
 	/* 命令行窗口 */
 	for (i = 0; i < 2; i++)
 	{
@@ -141,14 +149,9 @@ void HariMain(void)
 		sht_cons[i]->task = task_cons[i];
 		/* 命令行窗口需要光标 */
 		sht_cons[i]->flags |= 0x20;
+		cons_fifo[i] = (int *) memman_alloc_4k(memman, 128 * 4);
+		fifo32_init(&task_cons[i]->fifo, 128, cons_fifo[i], task_cons[i]);
 	}
-
-	/* 鼠标图层 */
-	sht_mouse = sheet_alloc(shtctl);
-	sheet_setbuf(sht_mouse, buf_mouse, 16, 16, 99);
-	init_mouse_cursor8(buf_mouse, 99);
-	mx = (binfo->scrnx - 16) / 2;
-	my = (binfo->scrny - 28 - 16) / 2;
 
 	/* 设置图层位置和层级 */
 	sheet_slide(sht_back, 0, 0);

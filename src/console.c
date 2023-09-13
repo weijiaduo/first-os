@@ -33,10 +33,6 @@ void console_task(struct SHEET *sheet, unsigned int memtotal)
 	struct TASK *task = task_now();
 	task->cons = &cons;
 
-	/* 窗口FIFO缓冲区 */
-	int fifobuf[128];
-	fifo32_init(&task->fifo, 128, fifobuf, task);
-
 	/* 定时器 */
 	cons.timer = timer_alloc();
 	timer_init(cons.timer, &task->fifo, 1);
