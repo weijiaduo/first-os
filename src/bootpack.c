@@ -53,7 +53,7 @@ void HariMain(void)
 	};
 
 	char s[40];
-	int mx, my, mmx = -1, mmy = -1;
+	int mx, my, mmx = -1, mmy = -1, mmx2 = 0;
 	int i, j, x, y;
 
 	int key_shift = 0; /* 未按下shift键为0，按下左shift键为1，按下右shift键为2，按下左右shift键为3 */
@@ -380,6 +380,7 @@ void HariMain(void)
 										{
 											mmx = mx;
 											mmy = my;
+											mmx2 = sht->vx0;
 										}
 										/* 如果点击的是关闭按钮，则关闭窗口 */
 										if (sht->bxsize - 21 <= x && x < sht->bxsize - 5 && 5 <= y && y < 19)
@@ -405,8 +406,9 @@ void HariMain(void)
 							/* 如果处于窗口移动模式 */
 							x = mx - mmx;
 							y = my - mmy;
-							sheet_slide(sht, sht->vx0 + x, sht->vy0 + y);
-							mmx = mx;
+							/* +2 是为了避免 AND 四舍五入后引起的窗口左移 */
+							/* 加上 &~3 是为了使得 x 坐标大小变成 4 的倍数 */
+							sheet_slide(sht, (mmx2 + x + 2) & ~3, sht->vy0 + y);
 							mmy = my;
 						}
 					}
