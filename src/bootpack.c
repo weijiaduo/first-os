@@ -431,6 +431,20 @@ void HariMain(void)
 											mmx = mx;
 											mmy = my;
 										}
+										/* 如果点击的是关闭按钮，则关闭窗口 */
+										if (sht->bxsize - 21 <= x && x < sht->bxsize - 5 && 5 <= y && y < 19)
+										{
+											if (sht->task != 0)
+											{
+												/* 该窗口是应用程序窗口 */
+												cons = (struct CONSOLE *) *((int *) 0x0fec);
+												cons_putstr0(cons, "\nBreak(mouse): \n");
+												io_cli(); /* 强制结束处理中，禁止切换任务 */
+												task_cons->tss.eax = (int) &(task_cons->tss.esp0);
+												task_cons->tss.eip = (int) asm_end_app;
+												io_sti();
+											}
+										}
 										break;
 									}
 								}
