@@ -426,6 +426,13 @@ void HariMain(void)
 									if (sht->buf[y * sht->bxsize + x] != sht->col_inv)
 									{
 										sheet_updown(sht, shtctl->top - 1);
+										/* 激活鼠标选中的图层窗口 */
+										if (sht != key_win)
+										{
+											cursor_c = keywin_off(key_win, sht_win, cursor_c, cursor_x);
+											key_win = sht;
+											cursor_c = keywin_on(key_win, sht_win, cursor_c);
+										}
 										/* 如果点击的是窗口标题栏区域，则进入窗口移动模式 */
 										if (3 <= x && x < sht->bxsize - 3 && 3 <= y && y < 21)
 										{
