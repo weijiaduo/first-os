@@ -7,67 +7,65 @@ void HariMain(void)
 {
 	struct BOOTINFO *binfo = (struct BOOTINFO *)ADR_BOOTINFO;
 
-	char s[40];
-	struct FIFO32 fifo;
-	int fifobuf[128];
-
-	struct MOUSE_DEC mdec;
-	struct TIMER *timer;
-
 	unsigned int memtotal;
 	struct MEMMAN *memman = (struct MEMMAN *)MEMMAN_ADDR;
 	struct SHTCTL *shtctl;
+	struct MOUSE_DEC mdec;
 
+	/* 背景图层 */
 	struct SHEET *sht_back;
 	unsigned char *buf_back;
 
+	/* 鼠标图层 */
 	struct SHEET *sht_mouse;
 	unsigned char buf_mouse[256];
 
-	/* 任务A */
-	struct TASK *task_a;
-	struct SHEET *sht_win;
-	unsigned char *buf_win;
-
-	/* 命令行 */
-	struct TASK *task_cons[2], *task;
+	/* 命令行窗口 */
+	struct TASK *task_cons[2];
 	struct SHEET *sht_cons[2];
 	unsigned char *buf_cons[2];
-	struct CONSOLE *cons;
-	struct SHEET *sht = 0;
-	struct SHEET *key_win; /* 键盘输入窗口 */
+
+	/* 任务A */
+	struct TASK *task_a, *task;
 
 	/* 没按下 Shift 键时 */
 	static char keytable0[0x80] = {
-		0, 0, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '^', 0, 0,
-		'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '@', '[', 0, 0, 'A', 'S',
-		'D', 'F', 'G', 'H', 'J', 'K', 'L', ';', ':', 0, 0, ']', 'Z', 'X', 'C', 'V',
-		'B', 'N', 'M', ',', '.', '/', 0, '*', 0, ' ', 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, '7', '8', '9', '-', '4', '5', '6', '+', '1',
-		'2', '3', '0', '.', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0x5c, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x5c, 0, 0};
+		0,   0,   '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '^', 0x08, 0,
+		'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '@', '[', 0x0a, 0, 'A', 'S',
+		'D', 'F', 'G', 'H', 'J', 'K', 'L', ';', ':', 0,   0,   ']', 'Z', 'X', 'C', 'V',
+		'B', 'N', 'M', ',', '.', '/', 0,   '*', 0,   ' ', 0,   0,   0,   0,   0,   0,
+		0,   0,   0,   0,   0,   0,   0,   '7', '8', '9', '-', '4', '5', '6', '+', '1',
+		'2', '3', '0', '.', 0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+		0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+		0,   0,   0,   0x5c, 0,  0,   0,   0,   0,   0,   0,   0,   0,   0x5c, 0,  0
+	};
 	/* 按下 Shift 键时 */
 	static char keytable1[0x80] = {
-		0, 0, '!', 0x22, '#', '$', '%', '&', 0x27, '(', ')', '~', '=', '~', 0, 0,
-		'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '`', '{', 0, 0, 'A', 'S',
-		'D', 'F', 'G', 'H', 'J', 'K', 'L', '+', '*', 0, 0, '}', 'Z', 'X', 'C', 'V',
-		'B', 'N', 'M', '<', '>', '?', 0, '*', 0, ' ', 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, '7', '8', '9', '-', '4', '5', '6', '+', '1',
-		'2', '3', '0', '.', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, '_', 0, 0, 0, 0, 0, 0, 0, 0, 0, '|', 0, 0};
+		0,   0,   '!', 0x22, '#', '$', '%', '&', 0x27, '(', ')', '~', '=', '~', 0x08, 0,
+		'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '`', '{', 0x0a, 0, 'A', 'S',
+		'D', 'F', 'G', 'H', 'J', 'K', 'L', '+', '*', 0,   0,   '}', 'Z', 'X', 'C', 'V',
+		'B', 'N', 'M', '<', '>', '?', 0,   '*', 0,   ' ', 0,   0,   0,   0,   0,   0,
+		0,   0,   0,   0,   0,   0,   0,   '7', '8', '9', '-', '4', '5', '6', '+', '1',
+		'2', '3', '0', '.', 0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+		0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+		0,   0,   0,   '_', 0,   0,   0,   0,   0,   0,   0,   0,   0,   '|', 0,   0
+	};
 
-	int mx, my, i;
-	int j, x, y, mmx = -1, mmy = -1;
-	int cursor_x, cursor_c;
-	int key_to = 0; /* 键盘字符输出的位置 */
+	char s[40];
+	int mx, my, mmx = -1, mmy = -1;
+	int i, j, x, y;
+
 	int key_shift = 0; /* 未按下shift键为0，按下左shift键为1，按下右shift键为2，按下左右shift键为3 */
 	int key_leds = (binfo->leds >> 4) & 7; /* 键盘灯状态，第4位ScrollLock，第5位NumberLock，第6位CapsLock */
 	int keycmd_wait = -1; /* 向键盘控制器发送数据的状态 */
 
-	struct FIFO32 keycmd;
-	int keycmd_buf[32];
+	/* 鼠标/键盘、键盘控制器输入缓冲区 */
+	struct FIFO32 fifo, keycmd;
+	int fifobuf[128], keycmd_buf[32];
+
+	/* 键盘输入窗口图层 */
+	struct SHEET *key_win;
+	struct SHEET *sht = 0;
 
 	/* 初始化段表和中断记录表 */
 	init_gdtidt();
@@ -95,11 +93,6 @@ void HariMain(void)
 	/* 初始化并激活鼠标 */
 	enable_mouse(&fifo, 512, &mdec);
 
-	/* 初始化定时器缓冲区 */
-	timer = timer_alloc();
-	timer_init(timer, &fifo, 1);
-	timer_settime(timer, 50);
-
 	/* 内存管理 */
 	memtotal = memtest(0x00400000, 0xbfffffff);
 	memman_init(memman);
@@ -115,7 +108,7 @@ void HariMain(void)
 
 	/* 初始化图层 */
 	shtctl = shtctl_init(memman, binfo->vram, binfo->scrnx, binfo->scrny);
-	/* 保存起来，提供给应用程序用 */
+	/* 保存起来，供其他地方用 */
 	*((int *) 0x0fe4) = (int) shtctl;
 
 	/* 背景图层 */
@@ -150,16 +143,6 @@ void HariMain(void)
 		sht_cons[i]->flags |= 0x20;
 	}
 
-	/* 任务A图层 */
-	sht_win = sheet_alloc(shtctl);
-	buf_win = (unsigned char *)memman_alloc_4k(memman, 160 * 52);
-	sheet_setbuf(sht_win, buf_win, 144, 52, -1);
-	make_window8(buf_win, 144, 52, "task_a", 1);
-	/* 初始化输入框 */
-	make_textbox8(sht_win, 8, 28, 128, 16, COL8_FFFFFF);
-	cursor_x = 8;
-	cursor_c = COL8_FFFFFF;
-
 	/* 鼠标图层 */
 	sht_mouse = sheet_alloc(shtctl);
 	sheet_setbuf(sht_mouse, buf_mouse, 16, 16, 99);
@@ -171,16 +154,15 @@ void HariMain(void)
 	sheet_slide(sht_back, 0, 0);
 	sheet_slide(sht_cons[1], 56, 6);
 	sheet_slide(sht_cons[0], 8, 2);
-	sheet_slide(sht_win, 8, 56);
 	sheet_slide(sht_mouse, mx, my);
 	sheet_updown(sht_back, 0);
 	sheet_updown(sht_cons[1], 1);
 	sheet_updown(sht_cons[0], 2);
-	sheet_updown(sht_win, 3);
-	sheet_updown(sht_mouse, 4);
+	sheet_updown(sht_mouse, 3);
 
 	/* 初始化键盘输入窗口 */
-	key_win = sht_win;
+	key_win = sht_cons[0];
+	keywin_on(key_win);
 
 	/* 为避免和键盘当前状态冲突，在一开始先进行设置 */
 	fifo32_put(&keycmd, KEYCMD_LED);
@@ -210,7 +192,7 @@ void HariMain(void)
 			if (key_win->flags == 0)
 			{
 				key_win = shtctl->sheets[shtctl->top - 1];
-				cursor_c = keywin_on(key_win, sht_win, cursor_c);
+				keywin_on(key_win);
 			}
 
 			if (256 <= i && i <= 511)
@@ -243,61 +225,17 @@ void HariMain(void)
 					}
 				}
 
-				/* 一般字符 */
+				/* 一般字符/退格键/回车键 */
 				if (s[0] != 0)
 				{
-					if (key_win == sht_win)
-					{
-						/* 发送给窗口A */
-						if (cursor_x < 128)
-						{
-							/* 一般字符，显示后后移光标 */
-							s[1] = 0;
-							putfonts_asc_sht(sht_win, cursor_x, 28, COL8_000000, COL8_FFFFFF, s, 1);
-							cursor_x += 8;
-						}
-					}
-					else
-					{
-						/* 发送给命令行窗口 */
-						fifo32_put(&key_win->task->fifo, s[0] + 256);
-					}
-				}
-
-				/* 退格键 */
-				if (i == 256 + 0x0e)
-				{
-					if (key_win == sht_win)
-					{
-						/* 发送给窗口A */
-						if (cursor_x > 8)
-						{
-							/* 用空格把光标去掉，再前移1次光标 */
-							putfonts_asc_sht(sht_win, cursor_x, 28, COL8_000000, COL8_FFFFFF, " ", 1);
-							cursor_x -= 8;
-						}
-					}
-					else
-					{
-						/* 发送给命令行窗口 */
-						fifo32_put(&key_win->task->fifo, 8 + 256);
-					}
-				}
-
-				/* 回车键 */
-				if (i == 256 + 0x1c)
-				{
-					if (key_win != sht_win)
-					{
-						/* 发送至命令行窗口 */
-						fifo32_put(&key_win->task->fifo, 10 + 256);
-					}
+					/* 发送给命令行窗口 */
+					fifo32_put(&key_win->task->fifo, s[0] + 256);
 				}
 
 				/* Tab 键 */
 				if (i == 256 + 0x0f)
 				{
-					cursor_c = keywin_off(key_win, sht_win, cursor_c, cursor_x);
+					keywin_off(key_win);
 					j = key_win->height - 1;
 					/* 0层是背景，top层是鼠标 */
 					if (j == 0)
@@ -305,7 +243,7 @@ void HariMain(void)
 						j = shtctl->top - 1;
 					}
 					key_win = shtctl->sheets[j];
-					cursor_c = keywin_on(key_win, sht_win, cursor_c);
+					keywin_on(key_win);
 				}
 
 				/* 左 Shift ON */
@@ -382,13 +320,6 @@ void HariMain(void)
 					wait_KBC_sendready();
 					io_out8(PORT_KEYDAT, keycmd_wait);
 				}
-
-				/* 显示光标 */
-				if (cursor_c >= 0)
-				{
-					boxfill8(sht_win->buf, sht_win->bxsize, cursor_c, cursor_x, 28, cursor_x + 7, 43);
-				}
-				sheet_refresh(sht_win, cursor_x, 28, cursor_x + 8, 44);
 			}
 			else if (512 <= i && i <= 767)
 			{
@@ -437,9 +368,9 @@ void HariMain(void)
 										/* 激活鼠标选中的图层窗口 */
 										if (sht != key_win)
 										{
-											cursor_c = keywin_off(key_win, sht_win, cursor_c, cursor_x);
+											keywin_off(key_win);
 											key_win = sht;
-											cursor_c = keywin_on(key_win, sht_win, cursor_c);
+											keywin_on(key_win);
 										}
 										/* 如果点击的是窗口标题栏区域，则进入窗口移动模式 */
 										if (3 <= x && x < sht->bxsize - 3 && 3 <= y && y < 21)
@@ -484,30 +415,6 @@ void HariMain(void)
 					}
 				}
 			}
-			else if (i == 1)
-			{
-				/* 光标定时器（白） */
-				timer_init(timer, &fifo, 0);
-				timer_settime(timer, 50);
-				if (cursor_c >= 0)
-				{
-					cursor_c = COL8_000000;
-					boxfill8(sht_win->buf, sht_win->bxsize, cursor_c, cursor_x, 28, cursor_x + 7, 43);
-					sheet_refresh(sht_win, cursor_x, 28, cursor_x + 8, 44);
-				}
-			}
-			else if (i == 0)
-			{
-				/* 光标定时器（黑） */
-				timer_init(timer, &fifo, 1);
-				timer_settime(timer, 50);
-				if (cursor_c >= 0)
-				{
-					cursor_c = COL8_FFFFFF;
-					boxfill8(sht_win->buf, sht_win->bxsize, cursor_c, cursor_x, 28, cursor_x + 7, 43);
-					sheet_refresh(sht_win, cursor_x, 28, cursor_x + 8, 44);
-				}
-			}
 		}
 	}
 }
@@ -516,54 +423,30 @@ void HariMain(void)
  * @brief 失活窗口的标题颜色和光标
  * 
  * @param key_win 失活窗口
- * @param sht_win 图层A
- * @param cur_c 颜色
- * @param cur_x 光标横坐标
- * @return int 颜色
  */
-int keywin_off(struct SHEET *key_win, struct SHEET *sht_win, int cur_c, int cur_x)
+void keywin_off(struct SHEET *key_win)
 {
 	change_wtitle8(key_win, 0);
-	if (key_win == sht_win)
+	if ((key_win->flags & 0x20) != 0)
 	{
-		/* 不显示光标 */
-		cur_c = -1;
-		boxfill8(sht_win->buf, sht_win->bxsize, COL8_FFFFFF, cur_x, 28, cur_x + 7, 43);
+		/* 命令行窗口光标 OFF */
+		fifo32_put(&key_win->task->fifo, 3);
 	}
-	else
-	{
-		if ((key_win->flags & 0x20) != 0)
-		{
-			/* 命令行窗口光标 OFF */
-			fifo32_put(&key_win->task->fifo, 3);
-		}
-	}
-	return cur_c;
+	return;
 }
 
 /**
  * @brief 激活窗口的标题颜色和光标
  * 
  * @param key_win 激活窗口
- * @param sht_win 图层A
- * @param cur_c 颜色
- * @return int 颜色
  */
-int keywin_on(struct SHEET *key_win, struct SHEET *sht_win, int cur_c)
+void keywin_on(struct SHEET *key_win)
 {
 	change_wtitle8(key_win, 1);
-	if (key_win == sht_win)
+	if ((key_win->flags & 0x20) != 0)
 	{
-		/* 显示光标 */
-		cur_c = COL8_000000;
+		/* 命令行窗口光标 ON */
+		fifo32_put(&key_win->task->fifo, 2);
 	}
-	else
-	{
-		if ((key_win->flags & 0x20) != 0)
-		{
-			/* 命令行窗口光标 ON */
-			fifo32_put(&key_win->task->fifo, 2);
-		}
-	}
-	return cur_c;
+	return;
 }
