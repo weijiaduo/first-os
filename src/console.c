@@ -482,6 +482,8 @@ int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline)
 	struct MENMAN *memman = (struct MENMAN *) MEMMAN_ADDR;
 	struct SEGMENT_DESCRIPTOR *gdt = (struct SEGMENT_DESCRIPTOR *) ADR_GDT;
 	struct FILEINFO *finfo;
+	struct SHTCTL *shtctl;
+	struct SHEET *sht;
 
 	char name[18];
 	char *p, *q;
@@ -553,6 +555,18 @@ int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline)
 			/* 0x1b 是 HariMain 函数的地址，即程序执行入口 */
 			start_app(0x1b, 1003 * 8, esp, 1004 * 8, &(task->tss.esp0));
 
+			/* 应用程序结束后，关闭遗留的窗口 */
+			shtctl = (struct SHTCTL *) *((int *) 0x0fe4);
+			for (i = 0; i < MAX_SHEETS; i++)
+			{
+				sht = &(shtctl->sheets0[i]);
+				if (sht->flags != 0 && sht->task == task)
+				{
+					/* 关闭窗口 */
+					sheet_free(sht);
+				}
+			}
+
 			/* 释放缓冲区 */
 			memman_free_4k(memman, (int) q, segsize);
 		}
@@ -613,6 +627,7 @@ int *hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
 	{
 		/* 新窗口 */
 		sht = sheet_alloc(shtctl);
+		sht->task = task;
 		sheet_setbuf(sht, (char *) ebx + ds_base, esi, edi, eax);
 		make_window8((char *) ebx + ds_base, esi, edi, (char *) ecx + ds_base, 0);
 		sheet_slide(sht, 100, 50);

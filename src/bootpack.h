@@ -210,6 +210,7 @@ int memman_free_4k(struct MEMMAN *man, unsigned int addr, unsigned int size);
 struct SHEET
 {
     struct SHTCTL *ctl;
+    struct TASK *task;
     unsigned char *buf;
     int bxsize;
     int bysize;
