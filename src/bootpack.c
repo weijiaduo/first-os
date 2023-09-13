@@ -32,6 +32,7 @@ void HariMain(void)
 	unsigned char *buf_cons;
 	struct CONSOLE *cons;
 	struct SHEET *sht = 0;
+	struct SHEET *key_win; /* 键盘输入窗口 */
 
 	/* 没按下 Shift 键时 */
 	static char keytable0[0x80] = {
@@ -141,8 +142,12 @@ void HariMain(void)
 	*((int *)(task_cons->tss.esp + 4)) = (int)sht_cons;
 	*((int *)(task_cons->tss.esp + 8)) = memtotal;
 	task_run(task_cons, 2, 2); /* level=2, priority=2 */
+	/* 绑定图层和任务 */
+	sht_cons->task = task_cons;
+	/* 命令行窗口需要光标 */
+	sht_cons->flags |= 0x20;
 
-	/* 主窗口图层 */
+	/* 任务A图层 */
 	sht_win = sheet_alloc(shtctl);
 	buf_win = (unsigned char *)memman_alloc_4k(memman, 160 * 52);
 	sheet_setbuf(sht_win, buf_win, 144, 52, -1);
@@ -169,6 +174,9 @@ void HariMain(void)
 	sheet_updown(sht_win, 2);
 	sheet_updown(sht_mouse, 3);
 
+	/* 初始化键盘输入窗口 */
+	key_win = sht_win;
+
 	/* 为避免和键盘当前状态冲突，在一开始先进行设置 */
 	fifo32_put(&keycmd, KEYCMD_LED);
 	fifo32_put(&keycmd, key_leds);
@@ -192,6 +200,13 @@ void HariMain(void)
 		{
 			i = fifo32_get(&fifo);
 			io_sti();
+
+			/* 输入窗口被关闭了 */
+			if (key_win->flags == 0)
+			{
+				key_win = shtctl->sheets[shtctl->top - 1];
+				cursor_c = keywin_on(key_win, sht_win, cursor_c);
+			}
 
 			if (256 <= i && i <= 511)
 			{
@@ -226,7 +241,7 @@ void HariMain(void)
 				/* 一般字符 */
 				if (s[0] != 0)
 				{
-					if (key_to == 0)
+					if (key_win == sht_win)
 					{
 						/* 发送给窗口A */
 						if (cursor_x < 128)
@@ -240,14 +255,14 @@ void HariMain(void)
 					else
 					{
 						/* 发送给命令行窗口 */
-						fifo32_put(&task_cons->fifo, s[0] + 256);
+						fifo32_put(&key_win->task->fifo, s[0] + 256);
 					}
 				}
 
 				/* 退格键 */
 				if (i == 256 + 0x0e)
 				{
-					if (key_to == 0)
+					if (key_win == sht_win)
 					{
 						/* 发送给窗口A */
 						if (cursor_x > 8)
@@ -260,46 +275,32 @@ void HariMain(void)
 					else
 					{
 						/* 发送给命令行窗口 */
-						fifo32_put(&task_cons->fifo, 8 + 256);
+						fifo32_put(&key_win->task->fifo, 8 + 256);
 					}
 				}
 
 				/* 回车键 */
 				if (i == 256 + 0x1c)
 				{
-					if (key_to != 0)
+					if (key_win != sht_win)
 					{
 						/* 发送至命令行窗口 */
-						fifo32_put(&task_cons->fifo, 10 + 256);
+						fifo32_put(&key_win->task->fifo, 10 + 256);
 					}
 				}
 
 				/* Tab 键 */
 				if (i == 256 + 0x0f)
 				{
-					if (key_to == 0)
+					cursor_c = keywin_off(key_win, sht_win, cursor_c, cursor_x);
+					j = key_win->height - 1;
+					/* 0层是背景，top层是鼠标 */
+					if (j == 0)
 					{
-						key_to = 1;
-						make_wtitle8(buf_win, sht_win->bxsize, "task_a", 0);
-						make_wtitle8(buf_cons, sht_cons->bxsize, "console", 1);
-						/* 不显示光标 */
-						cursor_c = -1;
-						boxfill8(sht_win->buf, sht_win->bxsize, COL8_FFFFFF, cursor_x, 28, cursor_x + 7, 43);
-						/* 命令行窗口光标 ON */
-						fifo32_put(&task_cons->fifo, 2);
+						j = shtctl->top - 1;
 					}
-					else
-					{
-						key_to = 0;
-						make_wtitle8(buf_win, sht_win->bxsize, "task_a", 1);
-						make_wtitle8(buf_cons, sht_cons->bxsize, "console", 0);
-						/* 显示光标 */
-						cursor_c = COL8_000000;
-						/* 命令行窗口光标 OFF */
-						fifo32_put(&task_cons->fifo, 3);
-					}
-					sheet_refresh(sht_win, 0, 0, sht_win->bxsize, 21);
-					sheet_refresh(sht_cons, 0, 0, sht_cons->bxsize, 21);
+					key_win = shtctl->sheets[j];
+					cursor_c = keywin_on(key_win, sht_win, cursor_c);
 				}
 
 				/* 左 Shift ON */
@@ -434,9 +435,9 @@ void HariMain(void)
 										/* 如果点击的是关闭按钮，则关闭窗口 */
 										if (sht->bxsize - 21 <= x && x < sht->bxsize - 5 && 5 <= y && y < 19)
 										{
-											if (sht->task != 0)
+											/* 判断该窗口是否是应用程序窗口 */
+											if ((sht->flags & 0x10) != 0)
 											{
-												/* 该窗口是应用程序窗口 */
 												cons = (struct CONSOLE *) *((int *) 0x0fec);
 												cons_putstr0(cons, "\nBreak(mouse): \n");
 												io_cli(); /* 强制结束处理中，禁止切换任务 */
@@ -494,4 +495,60 @@ void HariMain(void)
 			}
 		}
 	}
+}
+
+/**
+ * @brief 失活窗口的标题颜色和光标
+ * 
+ * @param key_win 失活窗口
+ * @param sht_win 图层A
+ * @param cur_c 颜色
+ * @param cur_x 光标横坐标
+ * @return int 颜色
+ */
+int keywin_off(struct SHEET *key_win, struct SHEET *sht_win, int cur_c, int cur_x)
+{
+	change_wtitle8(key_win, 0);
+	if (key_win == sht_win)
+	{
+		/* 不显示光标 */
+		cur_c = -1;
+		boxfill8(sht_win->buf, sht_win->bxsize, COL8_FFFFFF, cur_x, 28, cur_x + 7, 43);
+	}
+	else
+	{
+		if ((key_win->flags & 0x20) != 0)
+		{
+			/* 命令行窗口光标 OFF */
+			fifo32_put(&key_win->task->fifo, 3);
+		}
+	}
+	return cur_c;
+}
+
+/**
+ * @brief 激活窗口的标题颜色和光标
+ * 
+ * @param key_win 激活窗口
+ * @param sht_win 图层A
+ * @param cur_c 颜色
+ * @return int 颜色
+ */
+int keywin_on(struct SHEET *key_win, struct SHEET *sht_win, int cur_c)
+{
+	change_wtitle8(key_win, 1);
+	if (key_win == sht_win)
+	{
+		/* 显示光标 */
+		cur_c = COL8_000000;
+	}
+	else
+	{
+		if ((key_win->flags & 0x20) != 0)
+		{
+			/* 命令行窗口光标 ON */
+			fifo32_put(&key_win->task->fifo, 2);
+		}
+	}
+	return cur_c;
 }
