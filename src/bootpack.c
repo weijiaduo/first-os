@@ -20,9 +20,6 @@ void HariMain(void)
 	struct SHEET *sht_mouse;
 	unsigned char buf_mouse[256];
 
-	/* 命令行窗口 */
-	struct SHEET *sht_cons[2];
-
 	/* 任务A */
 	struct TASK *task_a, *task;
 
@@ -124,19 +121,17 @@ void HariMain(void)
 	my = (binfo->scrny - 28 - 16) / 2;
 
 	/* 命令行窗口 */
-	sht_cons[0] = open_console(shtctl, memtotal);
-	sht_cons[1] = 0; /* 未打开状态 */
+	key_win = open_console(shtctl, memtotal);
 
 	/* 设置图层位置和层级 */
 	sheet_slide(sht_back, 0, 0);
-	sheet_slide(sht_cons[0], 32, 4);
+	sheet_slide(key_win, 32, 4);
 	sheet_slide(sht_mouse, mx, my);
 	sheet_updown(sht_back, 0);
-	sheet_updown(sht_cons[0], 1);
+	sheet_updown(key_win, 1);
 	sheet_updown(sht_mouse, 2);
 
-	/* 初始化键盘输入窗口 */
-	key_win = sht_cons[0];
+	/* 默认激活窗口 */
 	keywin_on(key_win);
 
 	/* 为避免和键盘当前状态冲突，在一开始先进行设置 */
@@ -295,14 +290,13 @@ void HariMain(void)
 					}
 				}
 				/* Shift+F2，打开新的命令行窗口 */
-				if (i == 256 + 0x3c && key_shift != 0 && sht_cons[1] == 0)
+				if (i == 256 + 0x3c && key_shift != 0)
 				{
-					sht_cons[1] = open_console(shtctl, memtotal);
-					sheet_slide(sht_cons[1], 32, 4);
-					sheet_updown(sht_cons[1], shtctl->top);
 					/* 自动将输入焦点切换到新打开的窗口 */
 					keywin_off(key_win);
-					key_win = sht_cons[1];
+					key_win = open_console(shtctl, memtotal);
+					sheet_slide(key_win, 32, 4);
+					sheet_updown(key_win, shtctl->top);
 					keywin_on(key_win);
 				}
 				/* F11 */
