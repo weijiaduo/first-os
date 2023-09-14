@@ -53,7 +53,8 @@ void HariMain(void)
 	};
 
 	char s[40];
-	int mx, my, mmx = -1, mmy = -1, mmx2 = 0;
+	int mx, my, new_mx, new_my, mmx = -1, mmy = -1, mmx2 = 0;
+	int new_wx = 0x7fffffff, new_wy = 0;
 	int i, j, x, y;
 
 	int key_shift = 0; /* 未按下shift键为0，按下左shift键为1，按下右shift键为2，按下左右shift键为3 */
@@ -107,7 +108,7 @@ void HariMain(void)
 	task_a = task_init(memman);
 	fifo.task = task_a;
 
-	/* 初始化图层 */
+	/* 初始化图层管理器 */
 	shtctl = shtctl_init(memman, binfo->vram, binfo->scrnx, binfo->scrny);
 	/* 保存起来，供其他地方用 */
 	*((int *) 0x0fe4) = (int) shtctl;
@@ -183,8 +184,26 @@ void HariMain(void)
 		io_cli();
 		if (fifo32_status(&fifo) == 0)
 		{
-			task_sleep(task_a);
-			io_sti();
+			/* FIFO为空，当存在搁置的绘图操作时，立即执行 */
+			if (new_mx >= 0)
+			{
+				/* 鼠标移动 */
+				io_sti();
+				sheet_slide(sht_mouse, new_mx, new_my);
+				new_mx = -1;
+			}
+			else if (new_wx != 0x7fffffff)
+			{
+				/* 窗口移动 */
+				io_sti();
+				sheet_slide(sht, new_wx, new_wy);
+				new_wx = 0x7fffffff;
+			}
+			else
+			{
+				task_sleep(task_a);
+				io_sti();
+			}
 		}
 		else
 		{
@@ -349,8 +368,9 @@ void HariMain(void)
 						my = binfo->scrny - 1;
 					}
 
-					/* 移动鼠标位置 */
-					sheet_slide(sht_mouse, mx, my);
+					/* 记录鼠标位置 */
+					new_mx = mx;
+					new_my = my;
 					if ((mdec.btn & 0x01) != 0)
 					{
 						/* 按下左键 */
@@ -381,6 +401,7 @@ void HariMain(void)
 											mmx = mx;
 											mmy = my;
 											mmx2 = sht->vx0;
+											new_wy = sht->vy0;
 										}
 										/* 如果点击的是关闭按钮，则关闭窗口 */
 										if (sht->bxsize - 21 <= x && x < sht->bxsize - 5 && 5 <= y && y < 19)
@@ -408,7 +429,8 @@ void HariMain(void)
 							y = my - mmy;
 							/* +2 是为了避免 AND 四舍五入后引起的窗口左移 */
 							/* 加上 &~3 是为了使得 x 坐标大小变成 4 的倍数 */
-							sheet_slide(sht, (mmx2 + x + 2) & ~3, sht->vy0 + y);
+							new_wx = (mmx2 + x + 2) & ~3;
+							new_wy = new_wy + y;
 							mmy = my;
 						}
 					}
@@ -417,6 +439,12 @@ void HariMain(void)
 						/* 没有按下左键，返回通常模式 */
 						mmx = -1;
 						mmy = -1;
+						/* 松开左键后，要立即更新窗口的位置 */
+						if (new_wx != 0x7fffffff)
+						{
+							sheet_slide(sht, new_wx, new_wy); /* 固定图层位置 */
+							new_wx = 0x7fffffff;
+						}
 					}
 				}
 			}
