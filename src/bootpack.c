@@ -297,6 +297,8 @@ void HariMain(void)
 						task->tss.eax = (int) &(task->tss.esp0);
 						task->tss.eip = (int) asm_end_app;
 						io_sti();
+						/* 任务处于休眠状态则唤醒，保证结束应用能够执行 */
+						task_run(task, -1, 0);
 					}
 				}
 
@@ -403,6 +405,8 @@ void HariMain(void)
 												task->tss.eax = (int) &(task->tss.esp0);
 												task->tss.eip = (int) asm_end_app;
 												io_sti();
+												/* 任务处于休眠状态则唤醒，保证结束应用能够执行 */
+												task_run(task, -1, 0);
 											}
 											else
 											{
