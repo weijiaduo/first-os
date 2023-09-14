@@ -5,24 +5,6 @@
 
 void HariMain(void)
 {
-	struct BOOTINFO *binfo = (struct BOOTINFO *)ADR_BOOTINFO;
-
-	unsigned int memtotal;
-	struct MEMMAN *memman = (struct MEMMAN *)MEMMAN_ADDR;
-	struct SHTCTL *shtctl;
-	struct MOUSE_DEC mdec;
-
-	/* 背景图层 */
-	struct SHEET *sht_back;
-	unsigned char *buf_back;
-
-	/* 鼠标图层 */
-	struct SHEET *sht_mouse;
-	unsigned char buf_mouse[256];
-
-	/* 任务A */
-	struct TASK *task_a, *task;
-
 	/* 没按下 Shift 键时 */
 	static char keytable0[0x80] = {
 		0,   0,   '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '^', 0x08, 0,
@@ -46,22 +28,40 @@ void HariMain(void)
 		0,   0,   0,   '_', 0,   0,   0,   0,   0,   0,   0,   0,   0,   '|', 0,   0
 	};
 
-	char s[40];
-	int mx, my, new_mx, new_my, mmx = -1, mmy = -1, mmx2 = 0;
-	int new_wx = 0x7fffffff, new_wy = 0;
-	int i, j, x, y;
+	struct BOOTINFO *binfo = (struct BOOTINFO *)ADR_BOOTINFO;
 
-	int key_shift = 0; /* 未按下shift键为0，按下左shift键为1，按下右shift键为2，按下左右shift键为3 */
-	int key_leds = (binfo->leds >> 4) & 7; /* 键盘灯状态，第4位ScrollLock，第5位NumberLock，第6位CapsLock */
-	int keycmd_wait = -1; /* 向键盘控制器发送数据的状态 */
+	unsigned int memtotal;
+	struct MEMMAN *memman = (struct MEMMAN *)MEMMAN_ADDR;
+	struct SHTCTL *shtctl;
+	struct MOUSE_DEC mdec;
+
+	/* 背景图层 */
+	struct SHEET *sht_back;
+	unsigned char *buf_back;
+
+	/* 鼠标图层 */
+	struct SHEET *sht_mouse;
+	unsigned char buf_mouse[256];
+
+	/* 任务A */
+	struct TASK *task_a, *task;
+
+	/* 当前激活窗口图层 */
+	struct SHEET *key_win;
+	struct SHEET *sht = 0;
 
 	/* 鼠标/键盘、键盘控制器输入缓冲区 */
 	struct FIFO32 fifo, keycmd;
 	int fifobuf[128], keycmd_buf[32];
 
-	/* 键盘输入窗口图层 */
-	struct SHEET *key_win;
-	struct SHEET *sht = 0;
+	int key_shift = 0; /* 未按下shift键为0，按下左shift键为1，按下右shift键为2，按下左右shift键为3 */
+	int key_leds = (binfo->leds >> 4) & 7; /* 键盘灯状态，第4位ScrollLock，第5位NumberLock，第6位CapsLock */
+	int keycmd_wait = -1; /* 向键盘控制器发送数据的状态 */
+
+	int mx, my, new_mx, new_my, mmx = -1, mmy = -1, mmx2 = 0;
+	int new_wx = 0x7fffffff, new_wy = 0;
+	int i, j, x, y;
+	char s[40];
 
 	/* 初始化段表和中断记录表 */
 	init_gdtidt();
@@ -98,9 +98,10 @@ void HariMain(void)
 	/* 初始化调色板 */
 	init_palette();
 
-	/* 多任务测试 */
+	/* 任务A，负责接收键盘鼠标数据 */
 	task_a = task_init(memman);
 	fifo.task = task_a;
+	*((int *) 0x0fec) = (int) &fifo;
 
 	/* 初始化图层管理器 */
 	shtctl = shtctl_init(memman, binfo->vram, binfo->scrnx, binfo->scrny);
@@ -177,10 +178,18 @@ void HariMain(void)
 			io_sti();
 
 			/* 输入窗口被关闭了 */
-			if (key_win->flags == 0)
+			if (key_win != 0 && key_win->flags == 0)
 			{
-				key_win = shtctl->sheets[shtctl->top - 1];
-				keywin_on(key_win);
+				if (shtctl->top == 1)
+				{
+					/* 当界面上只剩下背景和鼠标时 */
+					key_win = 0;
+				}
+				else
+				{
+					key_win = shtctl->sheets[shtctl->top - 1];
+					keywin_on(key_win);
+				}
 			}
 
 			if (256 <= i && i <= 511)
@@ -214,14 +223,14 @@ void HariMain(void)
 				}
 
 				/* 一般字符/退格键/回车键 */
-				if (s[0] != 0)
+				if (key_win != 0 && s[0] != 0)
 				{
 					/* 发送给命令行窗口 */
 					fifo32_put(&key_win->task->fifo, s[0] + 256);
 				}
 
 				/* Tab 键 */
-				if (i == 256 + 0x0f)
+				if (key_win != 0 && i == 256 + 0x0f)
 				{
 					keywin_off(key_win);
 					j = key_win->height - 1;
@@ -276,8 +285,9 @@ void HariMain(void)
 					fifo32_put(&keycmd, KEYCMD_LED);
 					fifo32_put(&keycmd, key_leds);
 				}
+
 				/* Shift+F1，强制结束应用程序 */
-				if (i == 256 + 0x3b && key_shift != 0)
+				if (key_win != 0 && i == 256 + 0x3b && key_shift != 0)
 				{
 					task = key_win->task;
 					if (task != 0 && task->tss.ss0 != 0)
@@ -289,6 +299,7 @@ void HariMain(void)
 						io_sti();
 					}
 				}
+
 				/* Shift+F2，打开新的命令行窗口 */
 				if (i == 256 + 0x3c && key_shift != 0)
 				{
@@ -299,6 +310,7 @@ void HariMain(void)
 					sheet_updown(key_win, shtctl->top);
 					keywin_on(key_win);
 				}
+
 				/* F11 */
 				if (i == 256 + 0x57 && shtctl->top > 2)
 				{
@@ -424,6 +436,11 @@ void HariMain(void)
 					}
 				}
 			}
+			else if (768 <= i && i <= 1023)
+			{
+				/* 命令行窗口关闭命令 */
+				close_console(shtctl->sheets0 + (i - 768));
+			}
 		}
 	}
 }
@@ -435,6 +452,7 @@ void HariMain(void)
  */
 void keywin_off(struct SHEET *key_win)
 {
+	if (key_win == 0) { return; }
 	change_wtitle8(key_win, 0);
 	if ((key_win->flags & 0x20) != 0)
 	{
@@ -451,6 +469,7 @@ void keywin_off(struct SHEET *key_win)
  */
 void keywin_on(struct SHEET *key_win)
 {
+	if (key_win == 0) { return; }
 	change_wtitle8(key_win, 1);
 	if ((key_win->flags & 0x20) != 0)
 	{
@@ -479,7 +498,8 @@ struct SHEET *open_console(struct SHTCTL *shtctl, unsigned int memtotal)
 	
 	/* 命令行任务 */
 	struct TASK *task = task_alloc();
-	task->tss.esp = memman_alloc_4k(memman, 64 * 1024) + 64 * 1024 - 12;
+	task->cons_stack = memman_alloc_4k(memman, 64 * 1024);
+	task->tss.esp = task->cons_stack + 64 * 1024 - 12;
 	task->tss.eip = (int)&console_task;
 	task->tss.es = 1 * 8;
 	task->tss.cs = 2 * 8;
@@ -500,4 +520,34 @@ struct SHEET *open_console(struct SHTCTL *shtctl, unsigned int memtotal)
 	int *fifo = (int *) memman_alloc_4k(memman, 128 * 4);
 	fifo32_init(&task->fifo, 128, fifo, task);
 	return sht;
+}
+
+/**
+ * @brief 关闭命令行窗口
+ * 
+ * @param sht 命令行窗口图层
+ */
+void close_console(struct SHEET *sht)
+{
+	struct MEMMAN *memman = (struct MEMMAN *) MEMMAN_ADDR;
+	struct TASK *task = sht->task;
+	memman_free_4k(memman, sht->buf, 256 * 265);
+	sheet_free(sht);
+	close_constask(task);
+	return;
+}
+
+/**
+ * @brief 关闭命令行任务
+ * 
+ * @param task 命令行任务
+ */
+void close_constask(struct TASK *task)
+{
+	struct MEMMAN *memman = (struct MEMMAN *) MEMMAN_ADDR;
+	task_sleep(task);
+	memman_free_4k(memman, task->cons_stack, 64 * 1024);
+	memman_free_4k(memman, (int) task->fifo.buf, 128 * 4);
+	task->flags = 0; /* 用来代替 task_free(task) */
+	return;
 }

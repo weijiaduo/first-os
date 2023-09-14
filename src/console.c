@@ -334,6 +334,10 @@ void cons_runcmd(char *cmdline, struct CONSOLE *cons, int *fat, unsigned int mem
 		/* type命令，输出文件内容 */
 		cmd_type(cons, fat, cmdline);
 	}
+	else if (strcmp(cmdline, "exit") == 0)
+	{
+		cmd_exit(cons, fat);
+	}
 	else if (cmdline[0] != 0)
 	{
 		/* 应用程序执行 */
@@ -463,6 +467,33 @@ void cmd_type(struct CONSOLE *cons, int *fat, char *cmdline)
 
 	cons_newline(cons);
 	return;
+}
+
+/**
+ * @brief 关闭命令行窗口
+ * 
+ * @param cons 命令行结构体
+ * @param fat 解压后的FAT记录
+ */
+void cmd_exit(struct CONSOLE *cons, int *fat)
+{
+	struct MENMAN *memman = (struct MENMAN *) MEMMAN_ADDR;
+	struct SHTCTL *shtctl = (struct SHTCTL *) *((int *) 0x0fe4);
+	struct FIFO32 *fifo = (struct FIFO32 *) *((int *) 0x0fec);
+	struct TASK *task = task_now();
+
+	/* 取消光标定时器 */
+	timer_cancel(cons->timer);
+	/* 释放FAT用的空间 */
+	memman_free_4k(memman, (int) fat, 4 * 2880);
+	
+	/* 通知任务 task_a 帮忙关闭当前任务 */
+	io_cli();
+	fifo32_put(fifo, cons->sht - shtctl->sheets0 + 768); /* 768~1023 */
+	io_sti();
+
+	/* 任务休眠直到被关闭 */
+	for (;;) { task_sleep(task); }
 }
 
 /**

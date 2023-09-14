@@ -291,6 +291,7 @@ struct TASK
     struct FIFO32 fifo; /* 存放任务的管道 */
     struct TSS32 tss;
     struct CONSOLE *cons; /* 命令行 */
+    int cons_stack; /* 命令行栈 */
     int ds_base; /* 数据段基址 */
 };
 struct TASKLEVEL
@@ -337,6 +338,7 @@ void cmd_mem(struct CONSOLE *cons, unsigned int memtotal);
 void cmd_cls(struct CONSOLE *cons);
 void cmd_dir(struct CONSOLE *cons);
 void cmd_type(struct CONSOLE *cons, int *fat, char *cmdline);
+void cmd_exit(struct CONSOLE *cons, int *fat);
 int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline);
 int *hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int eax);
 void hrb_api_linewin(struct SHEET *sht, int x0, int y0, int x1, int y1, int col);
@@ -368,3 +370,5 @@ void change_wtitle8(struct SHEET *sht, char act);
 void keywin_off(struct SHEET *key_win);
 void keywin_on(struct SHEET *key_win);
 struct SHEET *open_console(struct SHTCTL *shtctl, unsigned int memtotal);
+void close_console(struct SHEET *sht);
+void close_constask(struct TASK *task);
