@@ -100,6 +100,12 @@ void console_task(struct SHEET *sheet, unsigned int memtotal)
 				}
 			}
 
+			/* 关闭窗口 */
+			if (i == 4)
+			{
+				cmd_exit(&cons, fat);
+			}
+
 			/* 光标数据 */
 			if (i <= 3)
 			{
