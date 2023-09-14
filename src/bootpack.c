@@ -21,10 +21,7 @@ void HariMain(void)
 	unsigned char buf_mouse[256];
 
 	/* 命令行窗口 */
-	struct TASK *task_cons[2];
 	struct SHEET *sht_cons[2];
-	unsigned char *buf_cons[2];
-	int *cons_fifo[2];
 
 	/* 任务A */
 	struct TASK *task_a, *task;
@@ -127,42 +124,16 @@ void HariMain(void)
 	my = (binfo->scrny - 28 - 16) / 2;
 
 	/* 命令行窗口 */
-	for (i = 0; i < 2; i++)
-	{
-		sht_cons[i] = sheet_alloc(shtctl);
-		buf_cons[i] = (unsigned char *)memman_alloc_4k(memman, 256 * 165);
-		sheet_setbuf(sht_cons[i], buf_cons[i], 256, 165, -1); /* 无透明色 */
-		make_window8(buf_cons[i], 256, 165, "console", 0); /* 窗口范围，包括标题栏 */
-		make_textbox8(sht_cons[i], 8, 28, 240, 128, COL8_000000); /* 输入窗口范围 */
-		task_cons[i] = task_alloc();
-		task_cons[i]->tss.esp = memman_alloc_4k(memman, 64 * 1024) + 64 * 1024 - 12;
-		task_cons[i]->tss.eip = (int)&console_task;
-		task_cons[i]->tss.es = 1 * 8;
-		task_cons[i]->tss.cs = 2 * 8;
-		task_cons[i]->tss.ss = 1 * 8;
-		task_cons[i]->tss.ds = 1 * 8;
-		task_cons[i]->tss.fs = 1 * 8;
-		task_cons[i]->tss.gs = 1 * 8;
-		*((int *)(task_cons[i]->tss.esp + 4)) = (int)sht_cons[i];
-		*((int *)(task_cons[i]->tss.esp + 8)) = memtotal;
-		task_run(task_cons[i], 2, 2); /* level=2, priority=2 */
-		/* 绑定图层和任务 */
-		sht_cons[i]->task = task_cons[i];
-		/* 命令行窗口需要光标 */
-		sht_cons[i]->flags |= 0x20;
-		cons_fifo[i] = (int *) memman_alloc_4k(memman, 128 * 4);
-		fifo32_init(&task_cons[i]->fifo, 128, cons_fifo[i], task_cons[i]);
-	}
+	sht_cons[0] = open_console(shtctl, memtotal);
+	sht_cons[1] = 0; /* 未打开状态 */
 
 	/* 设置图层位置和层级 */
 	sheet_slide(sht_back, 0, 0);
-	sheet_slide(sht_cons[1], 56, 6);
-	sheet_slide(sht_cons[0], 8, 2);
+	sheet_slide(sht_cons[0], 32, 4);
 	sheet_slide(sht_mouse, mx, my);
 	sheet_updown(sht_back, 0);
-	sheet_updown(sht_cons[1], 1);
-	sheet_updown(sht_cons[0], 2);
-	sheet_updown(sht_mouse, 3);
+	sheet_updown(sht_cons[0], 1);
+	sheet_updown(sht_mouse, 2);
 
 	/* 初始化键盘输入窗口 */
 	key_win = sht_cons[0];
@@ -323,6 +294,17 @@ void HariMain(void)
 						io_sti();
 					}
 				}
+				/* Shift+F2，打开新的命令行窗口 */
+				if (i == 256 + 0x3c && key_shift != 0 && sht_cons[1] == 0)
+				{
+					sht_cons[1] = open_console(shtctl, memtotal);
+					sheet_slide(sht_cons[1], 32, 4);
+					sheet_updown(sht_cons[1], shtctl->top);
+					/* 自动将输入焦点切换到新打开的窗口 */
+					keywin_off(key_win);
+					key_win = sht_cons[1];
+					keywin_on(key_win);
+				}
 				/* F11 */
 				if (i == 256 + 0x57 && shtctl->top > 2)
 				{
@@ -482,4 +464,46 @@ void keywin_on(struct SHEET *key_win)
 		fifo32_put(&key_win->task->fifo, 2);
 	}
 	return;
+}
+
+/**
+ * @brief 打开命令行窗口
+ * 
+ * @param shtctl 图层管理器
+ * @param memtotal 内存大小
+ * @return struct SHEET* 命令行窗口图层
+ */
+struct SHEET *open_console(struct SHTCTL *shtctl, unsigned int memtotal)
+{
+	/* 命令行窗口 */
+	struct MEMMAN *memman = (struct MEMMAN *) MEMMAN_ADDR;
+	struct SHEET *sht = sheet_alloc(shtctl);
+	unsigned char *buf = (unsigned char *)memman_alloc_4k(memman, 256 * 165);
+	sheet_setbuf(sht, buf, 256, 165, -1); /* 无透明色 */
+	make_window8(buf, 256, 165, "console", 0); /* 窗口范围，包括标题栏 */
+	make_textbox8(sht, 8, 28, 240, 128, COL8_000000); /* 输入窗口范围 */
+	
+	/* 命令行任务 */
+	struct TASK *task = task_alloc();
+	task->tss.esp = memman_alloc_4k(memman, 64 * 1024) + 64 * 1024 - 12;
+	task->tss.eip = (int)&console_task;
+	task->tss.es = 1 * 8;
+	task->tss.cs = 2 * 8;
+	task->tss.ss = 1 * 8;
+	task->tss.ds = 1 * 8;
+	task->tss.fs = 1 * 8;
+	task->tss.gs = 1 * 8;
+	*((int *)(task->tss.esp + 4)) = (int)sht;
+	*((int *)(task->tss.esp + 8)) = memtotal;
+	task_run(task, 2, 2); /* level=2, priority=2 */
+
+	/* 绑定命令行的图层和任务 */
+	sht->task = task;
+	/* 命令行窗口启用光标 */
+	sht->flags |= 0x20;
+
+	/* 命令行输入缓冲区 */
+	int *fifo = (int *) memman_alloc_4k(memman, 128 * 4);
+	fifo32_init(&task->fifo, 128, fifo, task);
+	return sht;
 }
