@@ -344,6 +344,11 @@ void cons_runcmd(char *cmdline, struct CONSOLE *cons, int *fat, unsigned int mem
 	{
 		cmd_exit(cons, fat);
 	}
+	else if (strncmp(cmdline, "start ", 6) == 0)
+	{
+		/* start命令，新窗口执行命令 */
+		cmd_start(cons, cmdline, memtotal);
+	}
 	else if (cmdline[0] != 0)
 	{
 		/* 应用程序执行 */
@@ -500,6 +505,33 @@ void cmd_exit(struct CONSOLE *cons, int *fat)
 
 	/* 任务休眠直到被关闭 */
 	for (;;) { task_sleep(task); }
+}
+
+/**
+ * @brief 新窗口打开，并执行指定的命令
+ * 
+ * @param cons 命令行结构体
+ * @param cmdline 命令行字符串
+ * @param memtotal 内存总大小
+ */
+void cmd_start(struct CONSOLE *cons, char *cmdline, int memtotal)
+{
+	struct SHTCTL *shtctl = (struct SHTCTL *) *((int *) 0x0fe4);
+	struct SHEET *sht = open_console(shtctl, memtotal);
+	struct FIFO32 *fifo = &sht->task->fifo;
+	int i;
+
+	sheet_slide(sht, 32, 4);
+	sheet_updown(sht, shtctl->top);
+
+	/* 将命令行输入的字符串逐字复制到新的命令行窗口中 */
+	for (i = 6; cmdline[i] != 0; i++)
+	{
+		fifo32_put(fifo, cmdline[i] + 256);
+	}
+	fifo32_put(fifo, 10 + 256); /* 回车键 */
+	cons_newline(cons);
+	return;
 }
 
 /**
