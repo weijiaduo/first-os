@@ -112,6 +112,7 @@ void putblock8_8(char *vram, int vxsize, int pxsize, int pysize, int px0, int py
 #define LIMIT_BOTPAK 0x0007ffff
 #define AR_DATA32_RW 0x4092
 #define AR_CODE32_ER 0x409a
+#define AR_LDT 0x0082
 #define AR_TSS32 0x0089
 #define AR_INTGATE32 0x008e
 
@@ -290,6 +291,7 @@ struct TASK
     int priority; /* 优先级 */
     struct FIFO32 fifo; /* 存放任务的管道 */
     struct TSS32 tss;
+    struct SEGMENT_DESCRIPTOR ldt[2]; /* LDT 局部编号 */
     struct CONSOLE *cons; /* 命令行 */
     int cons_stack; /* 命令行栈 */
     int ds_base; /* 数据段基址 */
