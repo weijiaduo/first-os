@@ -11,14 +11,8 @@
  */
 void console_task(struct SHEET *sheet, unsigned int memtotal)
 {
-	/* 内存分配地址 */
-	struct MENMAN *memman = (struct MENMAN *) MEMMAN_ADDR;
-	/* 文件名的起始地址 */
-	struct FILEINFO *finfo = (struct FILEINFO *) (ADR_DISKIMG + 0x002600);
-	/* 段表地址 */
-	struct SEGMENT_DESCRIPTOR *gdt = (struct SEGMENT_DESCRIPTOR *) ADR_GDT;
-
 	/* 解压FAT文件分配表 */
+	struct MENMAN *memman = (struct MENMAN *) MEMMAN_ADDR;
 	int *fat = (int *) memman_alloc_4k(memman, 4 * 2880);
 	file_readfat(fat, (unsigned char *) (ADR_DISKIMG + 0x000200));
 	
@@ -34,9 +28,12 @@ void console_task(struct SHEET *sheet, unsigned int memtotal)
 	task->cons = &cons;
 
 	/* 定时器 */
-	cons.timer = timer_alloc();
-	timer_init(cons.timer, &task->fifo, 1);
-	timer_settime(cons.timer, 50);
+	if (sheet != 0)
+	{
+		cons.timer = timer_alloc();
+		timer_init(cons.timer, &task->fifo, 1);
+		timer_settime(cons.timer, 50);
+	}
 
 	/* 显式提示符 */
 	cons_putchar(&cons, '>', 1);
@@ -85,6 +82,12 @@ void console_task(struct SHEET *sheet, unsigned int memtotal)
 					/* 执行命令 */
 					cons_runcmd(cmdline, &cons, fat, memtotal);
 
+					/* 命令执行完成后，关闭后台任务 */
+					if (sheet == 0)
+					{
+						cmd_exit(&cons, fat);
+					}
+
 					/* 显示提示符 */
 					cons_putchar(&cons, '>', 1);
 				}
@@ -107,13 +110,16 @@ void console_task(struct SHEET *sheet, unsigned int memtotal)
 			}
 
 			/* 光标数据 */
-			if (i <= 3)
+			if (sheet != 0)
 			{
-				cons_cursor(&cons, cons.timer, i);
+				if (i <= 3)
+				{
+					cons_cursor(&cons, cons.timer, i);
+				}
+				
+				/* 刷新光标 */
+				sheet_refresh(sheet, cons.cur_x, cons.cur_y, cons.cur_x + 8, cons.cur_y + 16);
 			}
-			
-			/* 刷新光标 */
-			sheet_refresh(sheet, cons.cur_x, cons.cur_y, cons.cur_x + 8, cons.cur_y + 16);
 		}
 	}
 }
@@ -191,24 +197,27 @@ void cons_newline(struct CONSOLE *cons)
 	else
 	{
 		/* 超出范围，滚动换行 */
-		/* 整体上移一行，第一行会丢失 */
-		for (y = 28; y < 28 + 112; y++)
+		if (sheet != 0)
 		{
-			for (x = 8; x < 8 + 240; x++)
+			/* 整体上移一行，第一行会丢失 */
+			for (y = 28; y < 28 + 112; y++)
 			{
-				sheet->buf[x + y * sheet->bxsize] = sheet->buf[x + (y + 16) * sheet->bxsize];
+				for (x = 8; x < 8 + 240; x++)
+				{
+					sheet->buf[x + y * sheet->bxsize] = sheet->buf[x + (y + 16) * sheet->bxsize];
+				}
 			}
-		}
-		/* 擦除最后一行，相当于新行 */
-		for (y = 28 + 112; y < 28 + 128; y++)
-		{
-			for (x = 8; x < 8 + 240; x++)
+			/* 擦除最后一行，相当于新行 */
+			for (y = 28 + 112; y < 28 + 128; y++)
 			{
-				sheet->buf[x + y * sheet->bxsize] = COL8_000000;
+				for (x = 8; x < 8 + 240; x++)
+				{
+					sheet->buf[x + y * sheet->bxsize] = COL8_000000;
+				}
 			}
+			/* 刷新命令行窗口图层 */
+			sheet_refresh(sheet, 8, 28, 2 + 240, 28 + 128);
 		}
-		/* 刷新命令行窗口图层 */
-		sheet_refresh(sheet, 8, 28, 2 + 240, 28 + 128);
 	}
 	/* 回到行头 */
 	cons->cur_x = 8;
@@ -235,7 +244,10 @@ void cons_putchar(struct CONSOLE *cons, int chr, char move)
 		/* 制表符 */
 		for (;;)
 		{
-			putfonts_asc_sht(sheet, cons->cur_x, cons->cur_y, COL8_FFFFFF, COL8_000000, " ", 1);
+			if (sheet != 0)
+			{
+				putfonts_asc_sht(sheet, cons->cur_x, cons->cur_y, COL8_FFFFFF, COL8_000000, " ", 1);
+			}
 			cons->cur_x += 8;
 			if (cons->cur_x == 8 + 240)
 			{
@@ -263,7 +275,10 @@ void cons_putchar(struct CONSOLE *cons, int chr, char move)
 	else
 	{
 		/* 一般字符 */
-		putfonts_asc_sht(sheet, cons->cur_x, cons->cur_y, COL8_FFFFFF, COL8_000000, s, 1);
+		if (sheet != 0)
+		{
+			putfonts_asc_sht(sheet, cons->cur_x, cons->cur_y, COL8_FFFFFF, COL8_000000, s, 1);
+		}
 		if (move != 0)
 		{
 			/* move 为 0 时，光标不后移 */
@@ -320,22 +335,22 @@ void cons_putstr1(struct CONSOLE *cons, char *s, int l)
  */
 void cons_runcmd(char *cmdline, struct CONSOLE *cons, int *fat, unsigned int memtotal)
 {
-	if (strcmp(cmdline, "mem") == 0)
+	if (cons->sht != 0 && strcmp(cmdline, "mem") == 0)
 	{
 		/* mem 命令，打印内存 */
 		cmd_mem(cons, memtotal);
 	}
-	else if (strcmp(cmdline, "cls") == 0)
+	else if (cons->sht != 0 && strcmp(cmdline, "cls") == 0)
 	{
 		/* cls 命令，清屏 */
 		cmd_cls(cons);
 	}
-	else if (strcmp(cmdline, "dir") == 0)
+	else if (cons->sht != 0 && strcmp(cmdline, "dir") == 0)
 	{
 		/* dir 命令，打印目录 */
 		cmd_dir(cons);
 	}
-	else if (strncmp(cmdline, "type ", 5) == 0)
+	else if (cons->sht != 0 && strncmp(cmdline, "type ", 5) == 0)
 	{
 		/* type命令，输出文件内容 */
 		cmd_type(cons, fat, cmdline);
@@ -348,6 +363,11 @@ void cons_runcmd(char *cmdline, struct CONSOLE *cons, int *fat, unsigned int mem
 	{
 		/* start命令，新窗口执行命令 */
 		cmd_start(cons, cmdline, memtotal);
+	}
+	else if (strncmp(cmdline, "ncst ", 5) == 0)
+	{
+		/* ncst命令，当前窗口执行命令 */
+		cmd_ncst(cons, cmdline, memtotal);
 	}
 	else if (cmdline[0] != 0)
 	{
@@ -406,8 +426,8 @@ void cmd_cls(struct CONSOLE *cons)
  */
 void cmd_dir(struct CONSOLE *cons)
 {
-	struct SHEET *sheet = cons->sht;
-	struct FILEINFO *finfo = (struct FILEINFO *) (ADR_DISKIMG + 0x002600); /* 文件名的起始地址 */
+	/* 文件名的起始地址 */
+	struct FILEINFO *finfo = (struct FILEINFO *) (ADR_DISKIMG + 0x002600);
 
 	char s[30];
 	int i, j;
@@ -450,11 +470,9 @@ void cmd_dir(struct CONSOLE *cons)
  */
 void cmd_type(struct CONSOLE *cons, int *fat, char *cmdline)
 {
-	struct SHEET *sheet = cons->sht;
 	struct MENMAN *memman = (struct MENMAN *) MEMMAN_ADDR;
 	struct FILEINFO *finfo;
 	char *p;
-	int i;
 
 	/* 搜索指定的文件 */
 	finfo = file_search(cmdline + 5, (struct FILEINFO *) (ADR_DISKIMG + 0x002600), 224);
@@ -494,13 +512,23 @@ void cmd_exit(struct CONSOLE *cons, int *fat)
 	struct TASK *task = task_now();
 
 	/* 取消光标定时器 */
-	timer_cancel(cons->timer);
+	if (cons->sht != 0)
+	{
+		timer_cancel(cons->timer);
+	}
 	/* 释放FAT用的空间 */
 	memman_free_4k(memman, (int) fat, 4 * 2880);
 	
 	/* 通知任务 task_a 帮忙关闭当前任务 */
 	io_cli();
-	fifo32_put(fifo, cons->sht - shtctl->sheets0 + 768); /* 768~1023 */
+	if (cons->sht != 0)
+	{
+		fifo32_put(fifo, cons->sht - shtctl->sheets0 + 768); /* 768~1023 */
+	}
+	else
+	{
+		fifo32_put(fifo, task - taskctl->tasks0 + 1024); /* 1024~2023 */
+	}
 	io_sti();
 
 	/* 任务休眠直到被关闭 */
@@ -526,6 +554,29 @@ void cmd_start(struct CONSOLE *cons, char *cmdline, int memtotal)
 
 	/* 将命令行输入的字符串逐字复制到新的命令行窗口中 */
 	for (i = 6; cmdline[i] != 0; i++)
+	{
+		fifo32_put(fifo, cmdline[i] + 256);
+	}
+	fifo32_put(fifo, 10 + 256); /* 回车键 */
+	cons_newline(cons);
+	return;
+}
+
+/**
+ * @brief 当前窗口执行指定的命令
+ * 
+ * @param cons 命令行结构体
+ * @param cmdline 命令行字符串
+ * @param memtotal 内存总大小
+ */
+void cmd_ncst(struct CONSOLE *cons, char *cmdline, int memtotal)
+{
+	struct TASK *task = open_constask(0, memtotal);
+	struct FIFO32 *fifo = &task->fifo;
+	int i;
+
+	/* 将命令行输入的字符串逐字复制到新的命令行窗口中 */
+	for (i = 5; cmdline[i] != 0; i++)
 	{
 		fifo32_put(fifo, cmdline[i] + 256);
 	}

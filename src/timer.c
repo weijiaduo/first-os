@@ -70,7 +70,7 @@ void timer_init(struct TIMER *timer, struct FIFO32 *fifo, int data)
 /* 设置定时器超时时间 */
 void timer_settime(struct TIMER *timer, unsigned int timeout)
 {
-    int i, j, e;
+    int e;
     struct TIMER *t, *s;
 
     timer->timeout = timeout + timerctl.count;

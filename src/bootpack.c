@@ -446,8 +446,13 @@ void HariMain(void)
 			}
 			else if (768 <= i && i <= 1023)
 			{
-				/* 命令行窗口关闭命令 */
+				/* 命令行窗口关闭（关联任务也会一起关闭） */
 				close_console(shtctl->sheets0 + (i - 768));
+			}
+			else if (1024 <= i && i <= 2023)
+			{
+				/* 命令行任务关闭（仅关闭任务） */
+				close_constask(taskctl->tasks0 + (i - 1024));
 			}
 		}
 	}
@@ -488,7 +493,7 @@ void keywin_on(struct SHEET *key_win)
 }
 
 /**
- * @brief 打开命令行窗口
+ * @brief 新建命令行窗口
  * 
  * @param shtctl 图层管理器
  * @param memtotal 内存大小
@@ -503,8 +508,24 @@ struct SHEET *open_console(struct SHTCTL *shtctl, unsigned int memtotal)
 	sheet_setbuf(sht, buf, 256, 165, -1); /* 无透明色 */
 	make_window8(buf, 256, 165, "console", 0); /* 窗口范围，包括标题栏 */
 	make_textbox8(sht, 8, 28, 240, 128, COL8_000000); /* 输入窗口范围 */
-	
-	/* 命令行任务 */
+
+	/* 绑定命令行的图层和任务 */
+	sht->task = open_constask(sht, memtotal);
+	/* 命令行窗口启用光标 */
+	sht->flags |= 0x20;
+	return sht;
+}
+
+/**
+ * @brief 新建命令行任务
+ * 
+ * @param sht 命令行图层
+ * @param memtotal 内存总大小
+ * @return struct TASK* 命令行任务
+ */
+struct TASK *open_constask(struct SHEET *sht, unsigned int memtotal)
+{
+	struct MEMMAN *memman = (struct MEMMAN *) MEMMAN_ADDR;
 	struct TASK *task = task_alloc();
 	task->cons_stack = memman_alloc_4k(memman, 64 * 1024);
 	task->tss.esp = task->cons_stack + 64 * 1024 - 12;
@@ -517,17 +538,13 @@ struct SHEET *open_console(struct SHTCTL *shtctl, unsigned int memtotal)
 	task->tss.gs = 1 * 8;
 	*((int *)(task->tss.esp + 4)) = (int)sht;
 	*((int *)(task->tss.esp + 8)) = memtotal;
+
 	task_run(task, 2, 2); /* level=2, priority=2 */
 
-	/* 绑定命令行的图层和任务 */
-	sht->task = task;
-	/* 命令行窗口启用光标 */
-	sht->flags |= 0x20;
-
-	/* 命令行输入缓冲区 */
+	/* 输入缓冲区 */
 	int *fifo = (int *) memman_alloc_4k(memman, 128 * 4);
 	fifo32_init(&task->fifo, 128, fifo, task);
-	return sht;
+	return task;
 }
 
 /**
