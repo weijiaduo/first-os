@@ -160,26 +160,11 @@ color2.bim : color2.obj a_nask.obj Makefile
 color2.hrb : color2.bim Makefile
 	$(BIM2HRB) color2.bim color2.hrb 56k
 
-crack1.bim : crack1.obj a_nask.obj Makefile
-	$(OBJ2BIM) @$(RULEFILE) out:crack1.bim map:crack1.map crack1.obj a_nask.obj
+crack7.bim : crack7.obj Makefile
+	$(OBJ2BIM) @$(RULEFILE) out:crack7.bim stack:1k map:crack7.map crack7.obj
 
-crack1.hrb : crack1.bim Makefile
-	$(BIM2HRB) crack1.bim crack1.hrb 0
-
-crack2.hrb : crack2.nas Makefile
-	$(NASK) crack2.nas crack2.hrb crack2.lst
-
-crack3.hrb : crack3.nas Makefile
-	$(NASK) crack3.nas crack3.hrb crack3.lst
-
-crack4.hrb : crack4.nas Makefile
-	$(NASK) crack4.nas crack4.hrb crack4.lst
-
-crack5.hrb : crack5.nas Makefile
-	$(NASK) crack5.nas crack5.hrb crack5.lst
-
-crack6.hrb : crack6.nas Makefile
-	$(NASK) crack6.nas crack6.hrb crack6.lst
+crack7.hrb : crack7.bim Makefile
+	$(BIM2HRB) crack7.bim crack7.hrb 0k
 
 bug1.bim : bug1.obj a_nask.obj Makefile
 	$(OBJ2BIM) @$(RULEFILE) out:bug1.bim map:bug1.map bug1.obj a_nask.obj
@@ -201,7 +186,7 @@ bug3.hrb : bug3.bim Makefile
 
 haribote.img : ipl10.bin haribote.sys Makefile \
 	hello.hrb hello2.hrb a.hrb hello3.hrb hello4.hrb hello5.hrb \
-	crack1.hrb crack2.hrb crack3.hrb crack4.hrb crack5.hrb crack6.hrb \
+	crack7.hrb \
 	bug1.hrb bug2.hrb bug3.hrb \
 	winhelo.hrb winhelo2.hrb winhelo3.hrb \
 	star1.hrb stars.hrb stars2.hrb lines.hrb \
@@ -218,12 +203,7 @@ haribote.img : ipl10.bin haribote.sys Makefile \
 		copy from:hello3.hrb to:@: \
 		copy from:hello4.hrb to:@: \
 		copy from:hello5.hrb to:@: \
-		copy from:crack1.hrb to:@: \
-		copy from:crack2.hrb to:@: \
-		copy from:crack3.hrb to:@: \
-		copy from:crack4.hrb to:@: \
-		copy from:crack5.hrb to:@: \
-		copy from:crack6.hrb to:@: \
+		copy from:crack7.hrb to:@: \
 		copy from:bug1.hrb to:@: \
 		copy from:bug2.hrb to:@: \
 		copy from:bug3.hrb to:@: \
