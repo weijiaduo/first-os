@@ -48,7 +48,7 @@ void HariMain(void)
 
 	/* 当前激活窗口图层 */
 	struct SHEET *key_win;
-	struct SHEET *sht = 0;
+	struct SHEET *sht = 0, *sht2;
 
 	/* 鼠标/键盘、键盘控制器输入缓冲区 */
 	struct FIFO32 fifo, keycmd;
@@ -411,6 +411,12 @@ void HariMain(void)
 											else
 											{
 												/* 命令行窗口 */
+												/* 暂且隐藏该图层 */
+												sheet_updown(sht, -1);
+												keywin_off(key_win);
+												key_win = shtctl->sheets[shtctl->top - 1];
+												keywin_on(key_win);
+												/* 通知任务窗口关闭 */
 												task = sht->task;
 												io_cli();
 												fifo32_put(&task->fifo, 4);
@@ -450,13 +456,20 @@ void HariMain(void)
 			}
 			else if (768 <= i && i <= 1023)
 			{
-				/* 命令行窗口关闭（关联任务也会一起关闭） */
+				/* 命令行关闭（窗口和任务一起关闭） */
 				close_console(shtctl->sheets0 + (i - 768));
 			}
 			else if (1024 <= i && i <= 2023)
 			{
 				/* 命令行任务关闭（仅关闭任务） */
 				close_constask(taskctl->tasks0 + (i - 1024));
+			}
+			else if (2024 <= i && i <= 2279)
+			{
+				/* 命令行窗口关闭（仅关闭窗口） */
+				sht2 = shtctl->sheets0 + (i - 2024);
+				memman_free_4k(memman, (int) sht2->buf, 256 * 165);
+				sheet_free(sht2);
 			}
 		}
 	}

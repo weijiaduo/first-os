@@ -28,7 +28,7 @@ void console_task(struct SHEET *sheet, unsigned int memtotal)
 	task->cons = &cons;
 
 	/* 定时器 */
-	if (sheet != 0)
+	if (cons.sht != 0)
 	{
 		cons.timer = timer_alloc();
 		timer_init(cons.timer, &task->fifo, 1);
@@ -83,7 +83,7 @@ void console_task(struct SHEET *sheet, unsigned int memtotal)
 					cons_runcmd(cmdline, &cons, fat, memtotal);
 
 					/* 命令执行完成后，关闭后台任务 */
-					if (sheet == 0)
+					if (cons.sht == 0)
 					{
 						cmd_exit(&cons, fat);
 					}
@@ -110,7 +110,7 @@ void console_task(struct SHEET *sheet, unsigned int memtotal)
 			}
 
 			/* 光标数据 */
-			if (sheet != 0)
+			if (cons.sht != 0)
 			{
 				if (i <= 3)
 				{
@@ -118,7 +118,7 @@ void console_task(struct SHEET *sheet, unsigned int memtotal)
 				}
 				
 				/* 刷新光标 */
-				sheet_refresh(sheet, cons.cur_x, cons.cur_y, cons.cur_x + 8, cons.cur_y + 16);
+				sheet_refresh(cons.sht, cons.cur_x, cons.cur_y, cons.cur_x + 8, cons.cur_y + 16);
 			}
 		}
 	}
@@ -708,11 +708,12 @@ int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline)
  */
 int *hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int eax)
 {
-	/* 代码段基址 */
 	int i;
 	struct TASK *task = task_now();
+	/* 代码段基址 */
 	int ds_base = task->ds_base;
 	struct CONSOLE *cons = task->cons;
+	struct FIFO32 *sys_fifo = (struct FIFO32 *) *((int *) 0x0fec);
 	struct SHTCTL *shtctl = (struct SHTCTL *) *((int *) 0x0fe4);
 	struct SHEET *sht;
 	int *reg = &eax + 1;
@@ -868,6 +869,15 @@ int *hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
 			{
 				/* 光标OFF */
 				cons->cur_c = -1;
+			}
+			if (i == 4)
+			{
+				/* 只关闭命令行窗口 */
+				timer_cancel(cons->timer);
+				io_cli();
+				fifo32_put(sys_fifo, cons->sht - shtctl->sheets0 + 2024); /* 2024~2279 */
+				cons->sht = 0;
+				io_sti();
 			}
 			else if (i >= 256)
 			{
