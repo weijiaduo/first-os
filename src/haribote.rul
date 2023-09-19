@@ -1,19 +1,18 @@
 format:
-	/* ���̃Z�N�V�����Ń����N�̕��j���L�q */
+	/* 描述本节中的链接策略 */
 	code(align:1, logic:0x24,      file:0x24);
 	data(align:4, logic:stack_end, file:code_end);
 
 file:
-	/* ���̃Z�N�V�����ŃR�}���h���C���ɏ�������Ȃ�����
-		.obj�t�@�C���A.lib�t�@�C�����L�� */
-	/* �Ȃ��A���̃Z�N�V�����̓t���p�X�ŏ����Ă��悢�B */
-	/* ��F  c:/osask/gg00libc.lib;  */
+	/* 该部分不能写在命令行上包含.obj文件和.lib文件*/
+	/* 请注意，此部分可能会使用完整路径编写。 */
+	/* 例：c:/osask/gg00libc.lib;  */
 	../../z_tools/haribote/harilibc.lib;
 	../../z_tools/haribote/golibc.lib;
 
 label:
-	/* �K�������N���Ȃ���΂����Ȃ����x�����w�� */
-	/* �G���g���|�C���g���w�肷��΂����Ǝv���Ă������� */
+	/* 指定必须链接的标签 */
+	/* 只需指定入口点 */
 	_HariStartup;
 
-	/* ��L3�Z�N�V�����̏����͓���ւ��Ă͂����܂���! */
+	/* 不要改变以上三部分的顺序！ */

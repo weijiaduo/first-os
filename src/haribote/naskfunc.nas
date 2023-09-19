@@ -87,14 +87,14 @@ _io_out32:	; void io_out32(int port, int data);
 		RET
 
 _io_load_eflags:	; int io_load_eflags(void);
-		PUSHFD		; PUSH EFLAGS �Ƃ����Ӗ�
+		PUSHFD		; PUSH EFLAGS 的意思
 		POP		EAX
 		RET
 
 _io_store_eflags:	; void io_store_eflags(int eflags);
 		MOV		EAX,[ESP+4]
 		PUSH	EAX
-		POPFD		; POP EFLAGS �Ƃ����Ӗ�
+		POPFD		; POP EFLAGS 的意思
 		RET
 
 _load_gdtr:		; void load_gdtr(int limit, int addr);
@@ -227,26 +227,26 @@ _asm_inthandler2c:
 		IRETD
 
 _memtest_sub:	; unsigned int memtest_sub(unsigned int start, unsigned int end)
-		PUSH	EDI									; EBX, ESI, EDI 有另外的用途
+		PUSH	EDI							; EBX, ESI, EDI 有另外的用途
 		PUSH	ESI
 		PUSH	EBX
-		MOV		ESI,0xaa55aa55			; pat0 = 0xaa55aa55;
-		MOV		EDI,0x55aa55aa			; pat1 = 0x55aa55aa;
-		MOV		EAX,[ESP+12+4]			; i = start;
+		MOV		ESI,0xaa55aa55				; pat0 = 0xaa55aa55;
+		MOV		EDI,0x55aa55aa				; pat1 = 0x55aa55aa;
+		MOV		EAX,[ESP+12+4]				; i = start;
 mts_loop:
 		MOV		EBX,EAX
-		ADD		EBX,0xffc						; p = i + 0xffc;
-		MOV		EDX,[EBX]						; old = *p;
-		MOV		[EBX],ESI						; *p = pat0;
-		XOR		DWORD [EBX],0xffffffff	; *p ^= 0xffffffff;
-		CMP		EDI,[EBX]						; if (*p != pat1) goto fin;
+		ADD		EBX,0xffc					; p = i + 0xffc;
+		MOV		EDX,[EBX]					; old = *p;
+		MOV		[EBX],ESI					; *p = pat0;
+		XOR		DWORD [EBX],0xffffffff		; *p ^= 0xffffffff;
+		CMP		EDI,[EBX]					; if (*p != pat1) goto fin;
 		JNE		mts_fin
-		XOR		DWORD [EBX],0xffffffff	; *p ^= 0xffffffff;
-		CMP		ESI,[EBX]						; if (*p != pat0) goto fin;
+		XOR		DWORD [EBX],0xffffffff		; *p ^= 0xffffffff;
+		CMP		ESI,[EBX]					; if (*p != pat0) goto fin;
 		JNE		mts_fin
-		MOV		[EBX],EDX						; *p = old;
+		MOV		[EBX],EDX					; *p = old;
 		ADD		EAX,0x1000					; i += 0x1000;
-		CMP		EAX,[ESP+12+8]			; if (i <= end) goto mts_loop;
+		CMP		EAX,[ESP+12+8]				; if (i <= end) goto mts_loop;
 		JBE		mts_loop
 		POP		EBX
 		POP		ESI

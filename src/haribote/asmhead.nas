@@ -185,7 +185,7 @@ memcpy:
 		SUB		ECX,1
 		JNZ		memcpy			; 减数运算的结果如果不是0，就跳转到memcpy
 		RET
-; memcpy�̓A�h���X�T�C�Y�v���t�B�N�X�����Y��Ȃ���΁A�X�g�����O���߂ł�������
+; memcpy 可以用字符串指令编写，只要不忘记包含地址大小前缀即可
 
 		ALIGNB	16
 GDT0:
