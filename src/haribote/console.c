@@ -12,6 +12,8 @@
 void console_task(struct SHEET *sheet, unsigned int memtotal)
 {
 	int i;
+	/* 命令行输入 */
+	char cmdline[30];
 
 	/* 解压FAT文件分配表 */
 	struct MENMAN *memman = (struct MENMAN *) MEMMAN_ADDR;
@@ -35,6 +37,7 @@ void console_task(struct SHEET *sheet, unsigned int memtotal)
 	/* 命令行窗口任务 */
 	struct TASK *task = task_now();
 	task->cons = &cons;
+	task->cmdline = cmdline;
 	task->fhandle = fhandle;
 	task->fat = fat;
 
@@ -49,8 +52,6 @@ void console_task(struct SHEET *sheet, unsigned int memtotal)
 	/* 显式提示符 */
 	cons_putchar(&cons, '>', 1);
 
-	/* 命令行输入 */
-	char cmdline[30];
 	for(;;)
 	{
 		io_cli();
@@ -360,11 +361,6 @@ void cons_runcmd(char *cmdline, struct CONSOLE *cons, int *fat, unsigned int mem
 		/* dir 命令，打印目录 */
 		cmd_dir(cons);
 	}
-	else if (cons->sht != 0 && strncmp(cmdline, "type ", 5) == 0)
-	{
-		/* type命令，输出文件内容 */
-		cmd_type(cons, fat, cmdline);
-	}
 	else if (strcmp(cmdline, "exit") == 0)
 	{
 		cmd_exit(cons, fat);
@@ -467,43 +463,6 @@ void cmd_dir(struct CONSOLE *cons)
 			cons_putstr0(cons, s);
 		}
 	}
-	cons_newline(cons);
-	return;
-}
-
-/**
- * @brief type命令，输出文件内容
- * 
- * @param cons 命令行结构体
- * @param fat 解压后的FAT记录
- * @param cmdline 命令行字符串
- */
-void cmd_type(struct CONSOLE *cons, int *fat, char *cmdline)
-{
-	struct MENMAN *memman = (struct MENMAN *) MEMMAN_ADDR;
-	struct FILEINFO *finfo;
-	char *p;
-
-	/* 搜索指定的文件 */
-	finfo = file_search(cmdline + 5, (struct FILEINFO *) (ADR_DISKIMG + 0x002600), 224);
-	if (finfo != 0)
-	{
-		/* 找到文件的情况 */
-		/* 创建缓冲区 */
-		p = (char *) memman_alloc_4k(memman, finfo->size);
-		/* 加载文件内容到缓冲区 */
-		file_loadfile(finfo->clustno, finfo->size, p, fat, (char *) (ADR_DISKIMG + 0x003e00));
-		/* 打印缓冲区内容 */
-		cons_putstr1(cons, p, finfo->size);
-		/* 释放缓冲区 */
-		memman_free_4k(memman, (int) p, finfo->size);
-	}
-	else
-	{
-		/* 没有找到文件的情况 */
-		cons_putstr0(cons, "File not found.\n");
-	}
-
 	cons_newline(cons);
 	return;
 }
@@ -1049,6 +1008,23 @@ int *hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
 			}
 			*((char *) ebx + ds_base + i) = fh->buf[fh->pos];
 			fh->pos++;
+		}
+		reg[7] = i;
+	}
+	else if (edx == 26)
+	{
+		/* 获取命令行 */
+		for (i = 0;;i++)
+		{
+			*((char *) ebx + ds_base + i) = task->cmdline[i];
+			if (task->cmdline[i] == 0)
+			{
+				break;
+			}
+			if (i >= ecx)
+			{
+				break;
+			}
 		}
 		reg[7] = i;
 	}
