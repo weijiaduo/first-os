@@ -295,6 +295,8 @@ struct TASK
     struct CONSOLE *cons; /* 命令行 */
     int cons_stack; /* 命令行栈 */
     int ds_base; /* 数据段基址 */
+    struct FILEHANDLE *fhandle; /* 文件句柄 */
+    int *fat; /* FAT文件分配表 */
 };
 struct TASKLEVEL
 {
@@ -329,6 +331,11 @@ struct CONSOLE
     int cur_x, cur_y; /* 光标坐标 */
     int cur_c; /* 光标颜色 */
     struct TIMER *timer; /* 定时器 */
+};
+struct FILEHANDLE {
+	char *buf;  /* 缓冲区 */
+	int size;   /* 缓冲区大小 */
+	int pos;    /* 当前指针位置 */
 };
 void console_task(struct SHEET *sht_cons, unsigned int memtotal);
 void cons_cursor(struct CONSOLE *cons, struct TIMER *timer, int i);
