@@ -51,6 +51,7 @@ void console_task(struct SHEET *sheet, unsigned int memtotal)
 	{
 		task->langmode = 0;
 	}
+	task->langbyte1 = 0;
 
 	/* 定时器 */
 	if (cons.sht != 0)
@@ -208,6 +209,7 @@ void cons_cursor(struct CONSOLE *cons, struct TIMER *timer, int data)
  */
 void cons_newline(struct CONSOLE *cons)
 {
+	struct TASK *task = task_now();
 	struct SHEET *sheet = cons->sht;
 	int x, y;
 
@@ -243,6 +245,11 @@ void cons_newline(struct CONSOLE *cons)
 	}
 	/* 回到行头 */
 	cons->cur_x = 8;
+	/* 全角字符，需要多偏移8像素 */
+	if (task->langmode == 1 && task->langbyte1 != 0)
+	{
+		cons->cur_x += 8;
+	}
 	return;
 }
 
@@ -700,9 +707,9 @@ int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline)
 					task->fhandle[i].buf = 0;
 				}
 			}
-
 			/* 释放缓冲区 */
 			memman_free_4k(memman, (int) q, segsize);
+			task->langbyte1 = 0;
 		}
 		else
 		{
