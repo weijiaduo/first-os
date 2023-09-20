@@ -175,15 +175,18 @@ void putfonts8_asc(char *vram, int xsize, int x, int y, char c, unsigned char *s
             {
                 if ((0x81 <= *s && *s <= 0x9f) || (0xe0 <= *s && *s <= 0xfc))
                 {
+                    /* 全角字符（第一字节） */
                     task->langbyte1 = *s;
                 }
                 else
                 {
+                    /* 半角字符 */
                     putfont8(vram, xsize, x, y, c, nihongo + (*s) * 16);
                 }
             }
             else
             {
+                /* 全角字符（第二字节） */
                 if (0x81 <= task->langbyte1 && task->langbyte1 <= 0x9f)
                 {
                     k = (task->langbyte1 - 0x81) * 2;
@@ -205,6 +208,37 @@ void putfonts8_asc(char *vram, int xsize, int x, int y, char c, unsigned char *s
                     t = *s - 0x9f;
                     k++;
                 }
+                task->langbyte1 = 0;
+                font = nihongo + 256 * 16 + (k * 94 + t) * 32;
+                putfont8(vram, xsize, x - 8, y, c, font);   /* 左半部分 */
+                putfont8(vram, xsize, x, y, c, font + 16);  /* 右半部分 */
+            }
+            x += 8;
+        }
+    }
+    /* 日文EUC、中文 */
+    if (task->langmode == 2)
+    {
+        for (; *s != 0x00; s++)
+        {
+            if (task->langbyte1 == 0)
+            {
+                if (0x81 <= *s && *s <= 0xfe)
+                {
+                    /* 全角字符（第一字节） */
+                    task->langbyte1 = *s;
+                }
+                else
+                {
+                    /* 半角字符 */
+                    putfont8(vram, xsize, x, y, c, nihongo + (*s) * 16);
+                }
+            }
+            else
+            {
+                /* 全角字符（第二字节） */
+                k = task->langbyte1 - 0xa1;
+                t = *s - 0xa1;
                 task->langbyte1 = 0;
                 font = nihongo + 256 * 16 + (k * 94 + t) * 32;
                 putfont8(vram, xsize, x - 8, y, c, font);   /* 左半部分 */

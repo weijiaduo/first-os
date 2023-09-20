@@ -1,7 +1,7 @@
 ; haribote-ipl
 ; TAB=4
 
-CYLS  EQU    10         ; 柱面数量10
+CYLS  EQU    20         ; 柱面数量10
 
     ORG   0x7c00        ; 指明程序的装载地址
 
