@@ -59,8 +59,15 @@ void HariMain(void)
 	int keycmd_wait = -1; /* 向键盘控制器发送数据的状态 */
 
 	int mx, my, new_mx, new_my, mmx = -1, mmy = -1, mmx2 = 0;
-	int new_wx = 0x7fffffff, new_wy = 0;
-	int i, j, x, y;
+	int x, y, new_wx = 0x7fffffff, new_wy = 0;
+
+	/* 字体文件 */
+	int *fat;
+	unsigned char *nihongo;
+	struct FILEINFO *finfo;
+	extern char hankaku[4096];
+	
+	int i, j;
 	char s[40];
 
 	/* 初始化段表和中断记录表 */
@@ -100,12 +107,13 @@ void HariMain(void)
 
 	/* 任务A，负责接收键盘鼠标数据 */
 	task_a = task_init(memman);
+	task_a->langmode = 0;
 	fifo.task = task_a;
+	task_run(task_a, 1, 2);
 	*((int *) 0x0fec) = (int) &fifo;
 
 	/* 初始化图层管理器 */
 	shtctl = shtctl_init(memman, binfo->vram, binfo->scrnx, binfo->scrny);
-	/* 保存起来，供其他地方用 */
 	*((int *) 0x0fe4) = (int) shtctl;
 
 	/* 背景图层 */
@@ -138,6 +146,31 @@ void HariMain(void)
 	/* 为避免和键盘当前状态冲突，在一开始先进行设置 */
 	fifo32_put(&keycmd, KEYCMD_LED);
 	fifo32_put(&keycmd, key_leds);
+
+	/* 载入 nihongo.fnt 字体文件 */
+	nihongo = (unsigned char *) memman_alloc_4k(memman, 16 * 256 + 32 * 94 * 47);
+	fat = (int *) memman_alloc_4k(memman, 4 * 2880);
+	file_readfat(fat, (unsigned char *) (ADR_DISKIMG + 0x000200));
+	finfo = file_search("nihongo.fnt", (struct FILEINFO *) (ADR_DISKIMG + 0x002600), 224);
+	if (finfo != 0)
+	{
+		file_loadfile(finfo->clustno, finfo->size, nihongo, fat, (char *) (ADR_DISKIMG + 0x003e00));
+	}
+	else
+	{
+		for (i = 0; i < 16 * 256; i++)
+		{
+			/* 没有字库，半角字符直接复制英文字库 */
+			nihongo[i] = hankaku[i];
+		}
+		for (i = 16 * 256; i < 16 * 256 + 32 * 94 * 47; i++)
+		{
+			/* 没有字库，全角部分以0xff填充 */
+			nihongo[i] = 0xff;
+		}
+	}
+	*((int *) 0x0fe8) = (int) nihongo;
+	memman_free_4k(memman, (int) fat, 4 * 2880);
 
 	for (;;)
 	{

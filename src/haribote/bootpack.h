@@ -298,6 +298,7 @@ struct TASK
     int ds_base; /* 数据段基址 */
     struct FILEHANDLE *fhandle; /* 文件句柄 */
     int *fat; /* FAT文件分配表 */
+    char langmode; /* 语言模式，0英文，1日文，2中文 */
 };
 struct TASKLEVEL
 {
