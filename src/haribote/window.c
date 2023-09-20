@@ -79,12 +79,25 @@ void make_wtitle8(unsigned char *buf, int xsize, char *title, char act)
 
 void putfonts_asc_sht(struct SHEET *sht, int x, int y, int c, int b, char *s, int l)
 {
+	struct TASK *task = task_now();
 	// 背景更新
 	boxfill8(sht->buf, sht->bxsize, b, x, y, x + l * 8 - 1, y + 15);
-	// 文字更新
-	putfonts8_asc(sht->buf, sht->bxsize, x, y, c, s);
-	// 图层刷新
-	sheet_refresh(sht, x, y, x + l * 8, y + 16);
+	if (task->langmode != 0 && task->langbyte1 != 0)
+	{
+		/* 全角字符 */
+		// 文字更新
+		putfonts8_asc(sht->buf, sht->bxsize, x, y, c, s);
+		// 图层刷新
+		sheet_refresh(sht, x - 8, y, x + l * 8, y + 16);
+	}
+	else
+	{
+		/* 半角字符 */
+		// 文字更新
+		putfonts8_asc(sht->buf, sht->bxsize, x, y, c, s);
+		// 图层刷新
+		sheet_refresh(sht, x, y, x + l * 8, y + 16);
+	}
 }
 
 void make_textbox8(struct SHEET *sht, int x0, int y0, int sx, int sy, int c)
