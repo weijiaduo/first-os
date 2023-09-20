@@ -354,10 +354,14 @@ void cmd_exit(struct CONSOLE *cons, int *fat);
 void cmd_start(struct CONSOLE *cons, char *cmdline, int memtotal);
 void cmd_ncst(struct CONSOLE *cons, char *cmdline, int memtotal);
 int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline);
-int *hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int eax);
-void hrb_api_linewin(struct SHEET *sht, int x0, int y0, int x1, int y1, int col);
+void close_app(struct TASK *task);
 int *inthandler0c(int *esp);
 int *inthandler0d(int *esp);
+
+/* hrbapi.c */
+int *hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int eax);
+void hrb_api_getkey(struct TASK *task, int eax);
+void hrb_api_linewin(struct SHEET *sht, int x0, int y0, int x1, int y1, int col);
 
 /* file.c */
 /* 文件描述信息 */
