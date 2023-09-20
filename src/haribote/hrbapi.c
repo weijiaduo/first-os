@@ -64,7 +64,7 @@ int *hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
 	{
 		/* 显示字符 */
 		sht = (struct SHEET *) (ebx & 0xfffffffe);
-		putfonts8_asc(sht->buf, sht->bxsize, esi, edi, eax, (char *) ebp + ds_base);
+		putfonts8_str(sht->buf, sht->bxsize, esi, edi, eax, (char *) ebp + ds_base);
 		if ((ebx & 1) == 0)
 		{
 			sheet_refresh(sht, esi, edi, esi + ecx * 8, edi + 16);

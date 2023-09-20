@@ -96,7 +96,10 @@ void init_screen8(char *vram, int x, int y);
 
 /* 打印 */
 void putfont8(char *vram, int xsize, int x, int y, char c, char *font);
+void putfonts8_str(char *vram, int xsize, int x, int y, char c, unsigned char *s);
 void putfonts8_asc(char *vram, int xsize, int x, int y, char c, unsigned char *s);
+void putfonts8_jp(char *vram, int xsize, int x, int y, char c, unsigned char *s);
+void putfonts8_ch(char *vram, int xsize, int x, int y, char c, unsigned char *s);
 
 /* 鼠标 */
 void init_mouse_cursor8(char *mouse, char bc);

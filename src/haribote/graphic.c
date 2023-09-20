@@ -147,26 +147,54 @@ void putfont8(char *vram, int xsize, int x, int y, char c, char *font)
 }
 
 /**
+ * @brief 打印字符串
+ */
+void putfonts8_str(char *vram, int xsize, int x, int y, char c, unsigned char *s)
+{
+    struct TASK *task = task_now();
+    if (task->langmode == 0)
+    {
+        /* 英文 */
+        putfonts8_asc(vram, xsize, x, y, c, s);
+    }
+    else if (task->langmode == 1 || task->langmode == 2)
+    {
+        /* 日文 */
+        putfonts8_jp(vram, xsize, x, y, c, s);
+    }
+    else if (task->langmode == 3)
+    {
+        /* 中文 */
+        putfonts8_ch(vram, xsize, x, y, c, s);
+    }
+    return;
+}
+
+/**
  * 按ASCII码打印字符串
  */
 void putfonts8_asc(char *vram, int xsize, int x, int y, char c, unsigned char *s)
 {
     extern char hankaku[4096];
+    for (; *s != 0x00; s++)
+    {
+        putfont8(vram, xsize, x, y, c, hankaku + (*s) * 16);
+        x += 8;
+    }
+    return;
+}
+
+/**
+ * @brief 按日文打印字符串
+ */
+void putfonts8_jp(char *vram, int xsize, int x, int y, char c, unsigned char *s)
+{
     struct TASK *task = task_now();
     char *nihongo = (char *) *((int *) 0x0fe8);
     char *font;
-    int i, k, t;
+    int k, t;
 
-    /* 英文ASCII */
-    if (task->langmode == 0)
-    {
-        for (; *s != 0x00; s++)
-        {
-            putfont8(vram, xsize, x, y, c, hankaku + (*s) * 16);
-            x += 8;
-        }
-    }
-    /* 日文Shift-JIS */
+    /* 日文 Shift-JIS */
     if (task->langmode == 1)
     {
         for (; *s != 0x00; s++)
@@ -216,7 +244,7 @@ void putfonts8_asc(char *vram, int xsize, int x, int y, char c, unsigned char *s
             x += 8;
         }
     }
-    /* 日文EUC */
+    /* 日文 EUC */
     if (task->langmode == 2)
     {
         for (; *s != 0x00; s++)
@@ -247,45 +275,52 @@ void putfonts8_asc(char *vram, int xsize, int x, int y, char c, unsigned char *s
             x += 8;
         }
     }
-    /* 中文GB2312 */
-    if (task->langmode == 3)
+}
+
+/**
+ * @brief 按中文GB2312打印字符串
+ */
+void putfonts8_ch(char *vram, int xsize, int x, int y, char c, unsigned char *s)
+{
+    struct TASK *task = task_now();
+    char *nihongo = (char *) *((int *) 0x0fe8);
+    char *font;
+    int i, k, t;
+
+    for (; *s != 0x00; s++)
     {
-        for (; *s != 0x00; s++)
+        if (task->langbyte1 == 0)
         {
-            if (task->langbyte1 == 0)
+            if (0x81 <= *s && *s <= 0xfe)
             {
-                if (0x81 <= *s && *s <= 0xfe)
-                {
-                    /* 全角字符（第一字节） */
-                    task->langbyte1 = *s;
-                }
-                else
-                {
-                    /* 半角字符 */
-                    putfont8(vram, xsize, x, y, c, nihongo + (*s) * 16);
-                }
+                /* 全角字符（第一字节） */
+                task->langbyte1 = *s;
             }
             else
             {
-                /* 全角字符（第二字节） */
-                k = task->langbyte1 - 0xa1;
-                t = *s - 0xa1;
-                task->langbyte1 = 0;
-                font = nihongo + 256 * 16 + (k * 94 + t) * 32;
-                /* HZK16字模的字节排列顺序和日文的不一样 */
-                char byte1[16], byte2[16];
-                for (i = 0; i < 16; i++)
-                {
-                    byte1[i] = *(font + i * 2);
-                    byte2[i] = *(font + i * 2 + 1);
-                }
-                putfont8(vram, xsize, x - 8, y, c, byte1);  /* 左半部分 */
-                putfont8(vram, xsize, x, y, c, byte2);      /* 右半部分 */
+                /* 半角字符 */
+                putfont8(vram, xsize, x, y, c, nihongo + (*s) * 16);
             }
-            x += 8;
         }
+        else
+        {
+            /* 全角字符（第二字节） */
+            k = task->langbyte1 - 0xa1;
+            t = *s - 0xa1;
+            task->langbyte1 = 0;
+            font = nihongo + 256 * 16 + (k * 94 + t) * 32;
+            /* HZK16字模的字节排列顺序和日文的不一样 */
+            char byte1[16], byte2[16];
+            for (i = 0; i < 16; i++)
+            {
+                byte1[i] = *(font + i * 2);
+                byte2[i] = *(font + i * 2 + 1);
+            }
+            putfont8(vram, xsize, x - 8, y, c, byte1);  /* 左半部分 */
+            putfont8(vram, xsize, x, y, c, byte2);      /* 右半部分 */
+        }
+        x += 8;
     }
-    return;
 }
 
 /**

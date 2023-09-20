@@ -50,7 +50,7 @@ void make_wtitle8(unsigned char *buf, int xsize, char *title, char act)
 	}
 
 	boxfill8(buf, xsize, tbc, 3, 3, xsize - 4, 20);
-	putfonts8_asc(buf, xsize, 24, 4, tc, title);
+	putfonts8_str(buf, xsize, 24, 4, tc, title);
 	for (y = 0; y < 14; y++)
 	{
 		for (x = 0; x < 16; x++)
@@ -86,7 +86,7 @@ void putfonts_asc_sht(struct SHEET *sht, int x, int y, int c, int b, char *s, in
 	{
 		/* 全角字符 */
 		// 文字更新
-		putfonts8_asc(sht->buf, sht->bxsize, x, y, c, s);
+		putfonts8_str(sht->buf, sht->bxsize, x, y, c, s);
 		// 图层刷新
 		sheet_refresh(sht, x - 8, y, x + l * 8, y + 16);
 	}
@@ -94,7 +94,7 @@ void putfonts_asc_sht(struct SHEET *sht, int x, int y, int c, int b, char *s, in
 	{
 		/* 半角字符 */
 		// 文字更新
-		putfonts8_asc(sht->buf, sht->bxsize, x, y, c, s);
+		putfonts8_str(sht->buf, sht->bxsize, x, y, c, s);
 		// 图层刷新
 		sheet_refresh(sht, x, y, x + l * 8, y + 16);
 	}
