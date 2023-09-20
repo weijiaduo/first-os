@@ -155,9 +155,9 @@ void putfonts8_asc(char *vram, int xsize, int x, int y, char c, unsigned char *s
     struct TASK *task = task_now();
     char *nihongo = (char *) *((int *) 0x0fe8);
     char *font;
-    int k, t;
+    int i, k, t;
 
-    /* 英文 */
+    /* 英文ASCII */
     if (task->langmode == 0)
     {
         for (; *s != 0x00; s++)
@@ -166,7 +166,7 @@ void putfonts8_asc(char *vram, int xsize, int x, int y, char c, unsigned char *s
             x += 8;
         }
     }
-    /* 日文 */
+    /* 日文Shift-JIS */
     if (task->langmode == 1)
     {
         for (; *s != 0x00; s++)
@@ -216,7 +216,7 @@ void putfonts8_asc(char *vram, int xsize, int x, int y, char c, unsigned char *s
             x += 8;
         }
     }
-    /* 日文EUC、中文 */
+    /* 日文EUC */
     if (task->langmode == 2)
     {
         for (; *s != 0x00; s++)
@@ -243,6 +243,44 @@ void putfonts8_asc(char *vram, int xsize, int x, int y, char c, unsigned char *s
                 font = nihongo + 256 * 16 + (k * 94 + t) * 32;
                 putfont8(vram, xsize, x - 8, y, c, font);   /* 左半部分 */
                 putfont8(vram, xsize, x, y, c, font + 16);  /* 右半部分 */
+            }
+            x += 8;
+        }
+    }
+    /* 中文GB2312 */
+    if (task->langmode == 3)
+    {
+        for (; *s != 0x00; s++)
+        {
+            if (task->langbyte1 == 0)
+            {
+                if (0x81 <= *s && *s <= 0xfe)
+                {
+                    /* 全角字符（第一字节） */
+                    task->langbyte1 = *s;
+                }
+                else
+                {
+                    /* 半角字符 */
+                    putfont8(vram, xsize, x, y, c, nihongo + (*s) * 16);
+                }
+            }
+            else
+            {
+                /* 全角字符（第二字节） */
+                k = task->langbyte1 - 0xa1;
+                t = *s - 0xa1;
+                task->langbyte1 = 0;
+                font = nihongo + 256 * 16 + (k * 94 + t) * 32;
+                /* HZK16字模的字节排列顺序和日文的不一样 */
+                char byte1[16], byte2[16];
+                for (i = 0; i < 16; i++)
+                {
+                    byte1[i] = *(font + i * 2);
+                    byte2[i] = *(font + i * 2 + 1);
+                }
+                putfont8(vram, xsize, x - 8, y, c, byte1);  /* 左半部分 */
+                putfont8(vram, xsize, x, y, c, byte2);      /* 右半部分 */
             }
             x += 8;
         }

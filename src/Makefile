@@ -52,7 +52,8 @@ haribote.img : haribote/ipl20.bin haribote/haribote.sys Makefile \
 		copy from:iroha/iroha.hrb to:@: \
 		copy from:chklang/chklang.hrb to:@: \
 		copy from:euc.txt to:@: \
-		copy from:nihongo/nihongo.fnt to:@: \
+		copy from:ch.txt to:@: \
+		copy from:nihongo/chgb2312.fnt to:@: \
 		imgout:haribote.img
 
 # 命令

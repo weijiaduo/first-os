@@ -587,7 +587,7 @@ void cmd_langmode(struct CONSOLE *cons, char *cmdline)
 {
 	struct TASK *task = task_now();
 	unsigned char mode = cmdline[9] - '0';
-	if (mode <= 2)
+	if (mode <= 3)
 	{
 		task->langmode = mode;
 	}

@@ -148,10 +148,11 @@ void HariMain(void)
 	fifo32_put(&keycmd, key_leds);
 
 	/* 载入 nihongo.fnt 字体文件 */
-	nihongo = (unsigned char *) memman_alloc_4k(memman, 16 * 256 + 32 * 94 * 47);
+	nihongo = (unsigned char *) memman_alloc_4k(memman, 16 * 256 + 32 * 94 * 55);
 	fat = (int *) memman_alloc_4k(memman, 4 * 2880);
 	file_readfat(fat, (unsigned char *) (ADR_DISKIMG + 0x000200));
-	finfo = file_search("nihongo.fnt", (struct FILEINFO *) (ADR_DISKIMG + 0x002600), 224);
+	finfo = file_search("chgb2312.fnt", (struct FILEINFO *) (ADR_DISKIMG + 0x002600), 224);
+	/* finfo = file_search("nihongo.fnt", (struct FILEINFO *) (ADR_DISKIMG + 0x002600), 224); */
 	if (finfo != 0)
 	{
 		file_loadfile(finfo->clustno, finfo->size, nihongo, fat, (char *) (ADR_DISKIMG + 0x003e00));
@@ -163,7 +164,7 @@ void HariMain(void)
 			/* 没有字库，半角字符直接复制英文字库 */
 			nihongo[i] = hankaku[i];
 		}
-		for (i = 16 * 256; i < 16 * 256 + 32 * 94 * 47; i++)
+		for (i = 16 * 256; i < 16 * 256 + 32 * 94 * 55; i++)
 		{
 			/* 没有字库，全角部分以0xff填充 */
 			nihongo[i] = 0xff;
