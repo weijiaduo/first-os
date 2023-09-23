@@ -610,10 +610,7 @@ void cmd_langmode(struct CONSOLE *cons, char *cmdline)
 int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline)
 {
 	struct MENMAN *memman = (struct MENMAN *) MEMMAN_ADDR;
-	struct SEGMENT_DESCRIPTOR *gdt = (struct SEGMENT_DESCRIPTOR *) ADR_GDT;
 	struct FILEINFO *finfo;
-	struct SHTCTL *shtctl;
-	struct SHEET *sht;
 
 	char name[18];
 	char *p, *q;

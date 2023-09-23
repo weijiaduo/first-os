@@ -375,6 +375,7 @@ void cmd_dir(struct CONSOLE *cons);
 void cmd_exit(struct CONSOLE *cons, int *fat);
 void cmd_start(struct CONSOLE *cons, char *cmdline, int memtotal);
 void cmd_ncst(struct CONSOLE *cons, char *cmdline, int memtotal);
+void cmd_langmode(struct CONSOLE *cons, char *cmdline);
 int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline);
 void close_app(struct TASK *task);
 int *inthandler0c(int *esp);
