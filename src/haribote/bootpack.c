@@ -3,6 +3,12 @@
 
 #include "bootpack.h"
 
+struct SHEET * keyboard_handle(struct KEYINFO *kinfo, int i, struct SHEET *key_win, unsigned int memtotal);
+struct SHEET * mouse_handle(struct MOUSEINFO *minfo, int i, struct SHEET *key_win);
+struct SHEET * close_win(struct SHEET *sht, struct SHEET *key_win);
+void keywin_off(struct SHEET *key_win);
+void keywin_on(struct SHEET *key_win);
+
 void HariMain(void)
 {
 	struct BOOTINFO *binfo = (struct BOOTINFO *)ADR_BOOTINFO;
@@ -31,7 +37,7 @@ void HariMain(void)
 	int fifobuf[128];
 	
 	/* 键盘状态 */
-	struct KEYBOARDINFO kinfo;
+	struct KEYINFO kinfo;
 	kinfo.key_shift = 0;
 	kinfo.key_leds = (binfo->leds >> 4) & 7;
 	kinfo.keycmd_wait = -1;
@@ -217,12 +223,12 @@ void HariMain(void)
 			if (256 <= i && i <= 511)
 			{
 				/* 键盘数据 */
-				key_win = keyboard_handle(&kinfo, i, key_win, shtctl, memtotal);
+				key_win = keyboard_handle(&kinfo, i, key_win, memtotal);
 			}
 			else if (512 <= i && i <= 767)
 			{
 				/* 鼠标数据 */
-				key_win = mouse_handle(&minfo, i, key_win, shtctl);
+				key_win = mouse_handle(&minfo, i, key_win);
 			}
 			else if (768 <= i && i <= 1023)
 			{
@@ -247,9 +253,14 @@ void HariMain(void)
 
 /**
  * @brief 键盘事件处理
+ * 
+ * @param kinfo 键盘信息
+ * @param i 键盘数据
+ * @param key_win 当前输入窗口
+ * @param memtotal 内存总大小
+ * @return struct SHEET* 新的输入窗口
  */
-struct SHEET * keyboard_handle(struct KEYBOARDINFO *kinfo, int i, struct SHEET *key_win,
-	struct SHTCTL *shtctl, unsigned int memtotal)
+struct SHEET * keyboard_handle(struct KEYINFO *kinfo, int i, struct SHEET *key_win, unsigned int memtotal)
 {
 	/* 没按下 Shift 键时 */
 	static char keytable0[0x80] = {
@@ -274,42 +285,33 @@ struct SHEET * keyboard_handle(struct KEYBOARDINFO *kinfo, int i, struct SHEET *
 		0,   0,   0,   '_', 0,   0,   0,   0,   0,   0,   0,   0,   0,   '|', 0,   0
 	};
 
-	int j;
-	char s[40];
+	struct SHTCTL *shtctl = (struct SHTCTL *) *((int *) 0x0fe4);
 	struct TASK *task;
+	char s = 0;
+	int j;
 
+	/* Shift 键处理 */
 	if (i < 0x80 + 256)
 	{
-		if (kinfo->key_shift == 0)
-		{
-			s[0] = keytable0[i - 256];
-		}
-		else
-		{
-			s[0] = keytable1[i - 256];
-		}
-	}
-	else
-	{
-		s[0] = 0;
+		s = kinfo->key_shift == 0 ? keytable0[i - 256] : keytable1[i - 256];
 	}
 
 	/* 字母大小写处理 */
-	if ('A' <= s[0] && s[0] <= 'Z')
+	if ('A' <= s && s <= 'Z')
 	{
 		if (((kinfo->key_leds & 4) == 0 && kinfo->key_shift == 0) ||
 			((kinfo->key_leds & 4) != 0 && kinfo->key_shift != 0))
 		{
 			/* 大小写转换 */
-			s[0] += 0x20;
+			s += 0x20;
 		}
 	}
 
 	/* 一般字符/退格键/回车键 */
-	if (key_win != 0 && s[0] != 0)
+	if (key_win != 0 && s != 0)
 	{
 		/* 发送给命令行窗口 */
-		fifo32_put(&key_win->task->fifo, s[0] + 256);
+		fifo32_put(&key_win->task->fifo, s + 256);
 	}
 
 	/* Tab 键 */
@@ -417,14 +419,18 @@ struct SHEET * keyboard_handle(struct KEYBOARDINFO *kinfo, int i, struct SHEET *
 
 /**
  * @brief 鼠标事件处理
+ * 
+ * @param minfo 鼠标信息
+ * @param i 鼠标数据
+ * @param key_win 当前输入窗口
+ * @return struct SHEET* 新的输入窗口
  */
-struct SHEET * mouse_handle(struct MOUSEINFO *minfo, int i, struct SHEET *key_win, struct SHTCTL *shtctl)
+struct SHEET * mouse_handle(struct MOUSEINFO *minfo, int i, struct SHEET *key_win)
 {
 	struct BOOTINFO *binfo = (struct BOOTINFO *)ADR_BOOTINFO;
+	struct SHTCTL *shtctl = (struct SHTCTL *) *((int *) 0x0fe4);
 	struct SHEET *sht = minfo->wsht;
-	struct TASK *task;
 	int x, y, j;
-	char *s[40];
 
 	if (mouse_decode(&minfo->mdec, i - 512) != 0)
 	{
@@ -463,62 +469,35 @@ struct SHEET * mouse_handle(struct MOUSEINFO *minfo, int i, struct SHEET *key_wi
 					sht = shtctl->sheets[j];
 					x = minfo->mx - sht->vx0;
 					y = minfo->my - sht->vy0;
-					if (0 <= x && x < sht->bxsize && 0 <= y && y < sht->bysize)
+					/* 判断鼠标点击的是窗口的可见区域 */
+					if (0 <= x && x < sht->bxsize && 0 <= y && y < sht->bysize
+						&& sht->buf[y * sht->bxsize + x] != sht->col_inv)
 					{
-						/* 判断鼠标点击的是窗口的可见区域 */
-						if (sht->buf[y * sht->bxsize + x] != sht->col_inv)
+						/* 激活选中的图层窗口 */
+						minfo->wsht = sht;
+						sheet_updown(sht, shtctl->top - 1);
+						if (sht != key_win)
 						{
-							/* 激活选中的图层窗口 */
-							minfo->wsht = sht;
-							sheet_updown(sht, shtctl->top - 1);
-							if (sht != key_win)
-							{
-								keywin_off(key_win);
-								key_win = sht;
-								keywin_on(key_win);
-							}
-							
-							/* 点击标题栏，则进入窗口移动模式 */
-							if (3 <= x && x < sht->bxsize - 3 && 3 <= y && y < 21)
-							{
-								minfo->old_mx = minfo->mx;
-								minfo->old_my = minfo->my;
-								minfo->old_wx = sht->vx0;
-								minfo->new_wy = sht->vy0;
-							}
-							
-							/* 点击关闭按钮，则关闭窗口 */
-							if (sht->bxsize - 21 <= x && x < sht->bxsize - 5 && 5 <= y && y < 19)
-							{
-								if ((sht->flags & 0x10) != 0)
-								{
-									/* 应用程序窗口 */
-									task = sht->task;
-									cons_putstr0(task->cons, "\nBreak(mouse): \n");
-									io_cli(); /* 强制结束处理中，禁止切换任务 */
-									task->tss.eax = (int) &(task->tss.esp0);
-									task->tss.eip = (int) asm_end_app;
-									io_sti();
-									/* 任务处于休眠状态则唤醒，保证结束应用能够执行 */
-									task_run(task, -1, 0);
-								}
-								else
-								{
-									/* 命令行窗口 */
-									/* 暂且隐藏该图层 */
-									sheet_updown(sht, -1);
-									keywin_off(key_win);
-									key_win = shtctl->sheets[shtctl->top - 1];
-									keywin_on(key_win);
-									/* 通知任务窗口关闭 */
-									task = sht->task;
-									io_cli();
-									fifo32_put(&task->fifo, 4);
-									io_sti();
-								}
-							}
-							break;
+							keywin_off(key_win);
+							key_win = sht;
+							keywin_on(key_win);
 						}
+						
+						/* 点击标题栏，则进入窗口移动模式 */
+						if (3 <= x && x < sht->bxsize - 3 && 3 <= y && y < 21)
+						{
+							minfo->old_mx = minfo->mx;
+							minfo->old_my = minfo->my;
+							minfo->old_wx = sht->vx0;
+							minfo->new_wy = sht->vy0;
+						}
+						
+						/* 点击关闭按钮，则关闭窗口 */
+						if (sht->bxsize - 21 <= x && x < sht->bxsize - 5 && 5 <= y && y < 19)
+						{
+							key_win = close_win(sht, key_win);
+						}
+						break;
 					}
 				}
 			}
@@ -546,6 +525,46 @@ struct SHEET * mouse_handle(struct MOUSEINFO *minfo, int i, struct SHEET *key_wi
 				minfo->new_wx = 0x7fffffff;
 			}
 		}
+	}
+	return key_win;
+}
+
+/**
+ * @brief 关闭窗口
+ * 
+ * @param sht 即将被关闭的窗口图层
+ * @param key_win 当前输入窗口图层
+ * @return struct SHEET* 新的当前图层
+ */
+struct SHEET * close_win(struct SHEET *sht, struct SHEET *key_win)
+{
+	struct SHTCTL *shtctl = (struct SHTCTL *) *((int *) 0x0fe4);
+	struct TASK *task;
+	if ((sht->flags & 0x10) != 0)
+	{
+		/* 应用程序窗口 */
+		task = sht->task;
+		cons_putstr0(task->cons, "\nBreak(mouse): \n");
+		io_cli(); /* 强制结束处理中，禁止切换任务 */
+		task->tss.eax = (int) &(task->tss.esp0);
+		task->tss.eip = (int) asm_end_app;
+		io_sti();
+		/* 任务处于休眠状态则唤醒，保证结束应用能够执行 */
+		task_run(task, -1, 0);
+	}
+	else
+	{
+		/* 命令行窗口 */
+		/* 暂且隐藏该图层 */
+		sheet_updown(sht, -1);
+		keywin_off(key_win);
+		key_win = shtctl->sheets[shtctl->top - 1];
+		keywin_on(key_win);
+		/* 通知任务窗口关闭 */
+		task = sht->task;
+		io_cli();
+		fifo32_put(&task->fifo, 4);
+		io_sti();
 	}
 	return key_win;
 }

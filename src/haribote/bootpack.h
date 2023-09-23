@@ -164,7 +164,7 @@ void inthandler27(int *esp);
 #define PORT_KEYCMD 0x0064
 #define KEYCMD_LED 0xed
 
-struct KEYBOARDINFO
+struct KEYINFO
 {
     int key_shift;          /* 未按下shift键为0，按下左shift键为1，按下右shift键为2，按下左右shift键为3 */
 	int key_leds;           /* 键盘灯状态，第4位ScrollLock，第5位NumberLock，第6位CapsLock */
@@ -407,8 +407,7 @@ void putfonts_str_sht(struct SHEET *sht, int x, int y, int c, int b, char *s, in
 void make_textbox8(struct SHEET *sht, int x0, int y0, int sx, int sy, int c);
 void change_wtitle8(struct SHEET *sht, char act);
 
-void keywin_off(struct SHEET *key_win);
-void keywin_on(struct SHEET *key_win);
+/* bootpack.c */
 struct SHEET *open_console(struct SHTCTL *shtctl, unsigned int memtotal);
 struct TASK *open_constask(struct SHEET *sht, unsigned int memtotal);
 void close_console(struct SHEET *sht);
