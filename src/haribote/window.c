@@ -77,7 +77,7 @@ void make_wtitle8(unsigned char *buf, int xsize, char *title, char act)
 	}
 }
 
-void putfonts_asc_sht(struct SHEET *sht, int x, int y, int c, int b, char *s, int l)
+void putfonts_str_sht(struct SHEET *sht, int x, int y, int c, int b, char *s, int l)
 {
 	struct TASK *task = task_now();
 	// 背景更新

@@ -164,6 +164,15 @@ void inthandler27(int *esp);
 #define PORT_KEYCMD 0x0064
 #define KEYCMD_LED 0xed
 
+struct KEYBOARDINFO
+{
+    int key_shift;          /* 未按下shift键为0，按下左shift键为1，按下右shift键为2，按下左右shift键为3 */
+	int key_leds;           /* 键盘灯状态，第4位ScrollLock，第5位NumberLock，第6位CapsLock */
+	int keycmd_wait;        /* 向键盘控制器发送数据的状态 */
+    struct FIFO32 keycmd;   /* 键盘控制器输入 */
+	int keycmd_buf[32];     /* 键盘控制器输入缓冲区 */
+};
+
 void inthandler21(int *esp);
 void wait_KBC_sendready(void);
 void init_keyboard(struct FIFO32 *fifo, int data0);
@@ -176,6 +185,16 @@ struct MOUSE_DEC
     int x;
     int y;
     int btn;
+};
+struct MOUSEINFO
+{
+    struct MOUSE_DEC mdec;  /* 鼠标解码数据 */
+    int mx, my;             /* 当前坐标 */
+    int old_mx, old_my;     /* 鼠标移动的起始坐标 */
+    int new_mx, new_my;     /* 鼠标移动的目标坐标 */
+    struct SHEET *wsht;     /* 移动窗口的图层 */
+    int old_wx, old_wy;     /* 移动窗口的起始坐标 */
+    int new_wx, new_wy;     /* 移动窗口的目标坐标 */
 };
 
 void inthandler2c(int *esp);
@@ -384,7 +403,7 @@ struct FILEINFO *file_search(char *name, struct FILEINFO *finfo, int max);
 /* window.c */
 void make_window8(unsigned char *buf, int xsize, int ysize, char *title, char act);
 void make_wtitle8(unsigned char *buf, int xsize, char *title, char act);
-void putfonts_asc_sht(struct SHEET *sht, int x, int y, int c, int b, char *s, int l);
+void putfonts_str_sht(struct SHEET *sht, int x, int y, int c, int b, char *s, int l);
 void make_textbox8(struct SHEET *sht, int x0, int y0, int sx, int sy, int c);
 void change_wtitle8(struct SHEET *sht, char act);
 

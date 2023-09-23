@@ -275,7 +275,7 @@ void cons_putchar(struct CONSOLE *cons, int chr, char move)
 		{
 			if (sheet != 0)
 			{
-				putfonts_asc_sht(sheet, cons->cur_x, cons->cur_y, COL8_FFFFFF, COL8_000000, " ", 1);
+				putfonts_str_sht(sheet, cons->cur_x, cons->cur_y, COL8_FFFFFF, COL8_000000, " ", 1);
 			}
 			cons->cur_x += 8;
 			if (cons->cur_x == 8 + 240)
@@ -306,7 +306,7 @@ void cons_putchar(struct CONSOLE *cons, int chr, char move)
 		/* 一般字符 */
 		if (sheet != 0)
 		{
-			putfonts_asc_sht(sheet, cons->cur_x, cons->cur_y, COL8_FFFFFF, COL8_000000, s, 1);
+			putfonts_str_sht(sheet, cons->cur_x, cons->cur_y, COL8_FFFFFF, COL8_000000, s, 1);
 		}
 		if (move != 0)
 		{
