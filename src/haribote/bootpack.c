@@ -3,6 +3,7 @@
 
 #include "bootpack.h"
 
+unsigned char * load_fonts(char *name, int half_size, int full_size);
 struct SHEET * keyboard_handle(struct KEYINFO *kinfo, int i, struct SHEET *key_win, unsigned int memtotal);
 struct SHEET * mouse_handle(struct MOUSEINFO *minfo, int i, struct SHEET *key_win);
 struct SHEET * close_win(struct SHEET *sht, struct SHEET *key_win);
@@ -18,7 +19,7 @@ void HariMain(void)
 	struct SHTCTL *shtctl;
 
 	/* 任务A */
-	struct TASK *task_a, *task;
+	struct TASK *task_a;
 
 	/* 背景图层 */
 	struct SHEET *sht_back;
@@ -55,13 +56,9 @@ void HariMain(void)
 	minfo.wsht = 0;
 
 	/* 字体文件 */
-	int *fat;
 	unsigned char *nihongo;
-	struct FILEINFO *finfo;
-	extern char hankaku[4096];
 	
-	int i, j;
-	char s[40];
+	int i;
 
 	/* 初始化段表和中断记录表 */
 	init_gdtidt();
@@ -140,31 +137,12 @@ void HariMain(void)
 	fifo32_put(&kinfo.keycmd, KEYCMD_LED);
 	fifo32_put(&kinfo.keycmd, kinfo.key_leds);
 
-	/* 载入 nihongo.fnt 字体文件 */
-	nihongo = (unsigned char *) memman_alloc_4k(memman, 16 * 256 + 32 * 94 * 55);
-	fat = (int *) memman_alloc_4k(memman, 4 * 2880);
-	file_readfat(fat, (unsigned char *) (ADR_DISKIMG + 0x000200));
-	finfo = file_search("chgb2312.fnt", (struct FILEINFO *) (ADR_DISKIMG + 0x002600), 224);
-	/* finfo = file_search("nihongo.fnt", (struct FILEINFO *) (ADR_DISKIMG + 0x002600), 224); */
-	if (finfo != 0)
-	{
-		file_loadfile(finfo->clustno, finfo->size, nihongo, fat, (char *) (ADR_DISKIMG + 0x003e00));
-	}
-	else
-	{
-		for (i = 0; i < 16 * 256; i++)
-		{
-			/* 没有字库，半角字符直接复制英文字库 */
-			nihongo[i] = hankaku[i];
-		}
-		for (i = 16 * 256; i < 16 * 256 + 32 * 94 * 55; i++)
-		{
-			/* 没有字库，全角部分以0xff填充 */
-			nihongo[i] = 0xff;
-		}
-	}
+	/* 载入字体文件 */
+	/* 中文：256个半角字符，55 * 94 个全角字符（即 55 个区，每个区有 94 个字符） */
+	nihongo = load_fonts("chgb2312.fnt", 256, 55 * 94);
+	/* 日文：256个半角字符，47 * 94 个全角字符（即 47 个区，每个区有 94 个字符） */
+	/* nihongo = load_fonts("nihongo.fnt", 256, 47 * 94); */
 	*((int *) 0x0fe8) = (int) nihongo;
-	memman_free_4k(memman, (int) fat, 4 * 2880);
 
 	for (;;)
 	{
@@ -249,6 +227,49 @@ void HariMain(void)
 			}
 		}
 	}
+}
+
+/**
+ * @brief 加载字体文件
+ * 
+ * @param name 字体文件名
+ * @param half_size 半角字符数量
+ * @param full_size 全角字符数量
+ * @return unsigned char* 字体文件地址
+ */
+unsigned char * load_fonts(char *name, int half_size, int full_size)
+{
+	struct MEMMAN *memman = (struct MEMMAN *)MEMMAN_ADDR;
+	extern char hankaku[4096];
+	
+	unsigned char *fonts;
+	struct FILEINFO *finfo;
+	int *fat;
+	int i;
+
+	fonts = (unsigned char *) memman_alloc_4k(memman, 16 * half_size + 32 * full_size);
+	fat = (int *) memman_alloc_4k(memman, 4 * 2880);
+	file_readfat(fat, (unsigned char *) (ADR_DISKIMG + 0x000200));
+	finfo = file_search(name, (struct FILEINFO *) (ADR_DISKIMG + 0x002600), 224);
+	if (finfo != 0)
+	{
+		file_loadfile(finfo->clustno, finfo->size, fonts, fat, (char *) (ADR_DISKIMG + 0x003e00));
+	}
+	else
+	{
+		for (i = 0; i < 16 * half_size; i++)
+		{
+			/* 没有字库，半角字符直接复制英文字库 */
+			fonts[i] = hankaku[i];
+		}
+		for (i = 16 * half_size; i < 16 * half_size + 32 * full_size; i++)
+		{
+			/* 没有字库，全角部分以0xff填充 */
+			fonts[i] = 0xff;
+		}
+	}
+	memman_free_4k(memman, (int) fat, 4 * 2880);
+	return fonts;
 }
 
 /**
