@@ -10,7 +10,6 @@ int *hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
 {
 	struct MENMAN *memman = (struct MENMAN *) MEMMAN_ADDR;
 	struct SHTCTL *shtctl = (struct SHTCTL *) *((int *) 0x0fe4);
-	struct FIFO32 *sys_fifo = (struct FIFO32 *) *((int *) 0x0fec);
 
 	struct TASK *task = task_now();
 	/* 代码段基址 */
@@ -133,7 +132,7 @@ int *hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
 	else if (edx == 15)
 	{
 		/* 按回车键关闭窗口 */
-        hrb_api_getkey(task, eax);
+        return hrb_api_getkey(task, &eax);
 	}
 	else if (edx == 16)
 	{
@@ -304,20 +303,13 @@ int *hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
 /**
  * @brief 等待输入
  */
-void hrb_api_getkey(struct TASK *task, int eax)
+int * hrb_api_getkey(struct TASK *task, int *eax)
 {
-    struct MENMAN *memman = (struct MENMAN *) MEMMAN_ADDR;
 	struct SHTCTL *shtctl = (struct SHTCTL *) *((int *) 0x0fe4);
 	struct FIFO32 *sys_fifo = (struct FIFO32 *) *((int *) 0x0fec);
-
-	int ds_base = task->ds_base; /* 代码段基址 */
 	struct CONSOLE *cons = task->cons;
 
-    int *reg = &eax + 1;
-	/* 强行改写通过 PUSHAD 保存的值 */
-	/* reg[0] : EDI,   reg[1] : ESI,   reg[2] : EBP,   reg[3] : ESP */
-	/* reg[4] : EBX,   reg[5] : EDX,   reg[6] : ECX,   reg[7] : EAX */
-
+    int *reg = eax + 1;
     int i;
     for (;;)
     {
@@ -326,7 +318,7 @@ void hrb_api_getkey(struct TASK *task, int eax)
         /* FIFO 为空 */
         if (fifo32_status(&task->fifo) == 0)
         {
-            if (eax != 0)
+            if (*eax != 0)
             {
                 /* eax=1时，休眠等待 */
                 task_sleep(task);
@@ -376,6 +368,7 @@ void hrb_api_getkey(struct TASK *task, int eax)
             return 0;
         }
     }
+	return 0;
 }
 
 /**

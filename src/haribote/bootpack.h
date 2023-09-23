@@ -382,7 +382,7 @@ int *inthandler0d(int *esp);
 
 /* hrbapi.c */
 int *hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int eax);
-void hrb_api_getkey(struct TASK *task, int eax);
+int * hrb_api_getkey(struct TASK *task, int *eax);
 void hrb_api_linewin(struct SHEET *sht, int x0, int y0, int x1, int y1, int col);
 
 /* file.c */
